@@ -590,6 +590,7 @@ class Wetter extends IPSModuleStrict
                 'less'      => $this->Translate('Less'),
                 'refresh'   => $this->Translate('Update now'),
                 'source'    => $station !== null || (!$warnings['outside'] && $this->WarningsWanted()) ? 'Open-Meteo · DWD' : 'Open-Meteo',
+                'level'     => $this->Translate('Level'),
                 'levels'    => ['', $this->Translate('Weather warning'), $this->Translate('Warning of markedly severe weather'), $this->Translate('Severe weather warning'), $this->Translate('Warning of extreme weather')],
             ],
         ];

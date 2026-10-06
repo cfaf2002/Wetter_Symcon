@@ -122,6 +122,12 @@
     .warn > svg { width: 18px; height: 18px; color: var(--lvl); }
     .warn .t { font-size: 13px; font-weight: 600; line-height: 1.25; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .warn .p { font-size: 11.5px; color: var(--muted); }
+    .warn .lv {
+        display: inline-block; max-width: 100%; margin-bottom: 3px; padding: 1px 8px; border-radius: var(--pill);
+        background: var(--lvl); color: #fff; font-size: 10.5px; font-weight: 700; letter-spacing: .02em;
+        white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-shadow: 0 1px 1px rgba(0, 0, 0, .25);
+    }
+    .warn[data-l="1"] .lv { color: #3a2a00; text-shadow: none; }
     .warn .cnt { display: none; margin-left: 6px; padding: 0 6px; border-radius: var(--pill); background: var(--lvl); color: #fff; font-weight: 700; font-size: 10.5px; }
     .warn button {
         min-height: 36px; min-width: 36px; padding: 0 10px; border: 0; border-radius: var(--radius-s);
@@ -188,7 +194,7 @@
 
     /* ---------- Größen ---------- */
     @container tile (max-height: 215px) {
-        .chips, #hourly, #daily, .foot, .warns .okline, .warn .p, .warn button { display: none !important; }
+        .chips, #hourly, #daily, .foot, .warns .okline, .warn .p, .warn .t, .warn button { display: none !important; }
         .warn { padding: 4px 8px; }
         .warn:not(:first-child) { display: none; }
     }
@@ -652,7 +658,7 @@
             if (list.length === 0) {
                 var ok = el('div', 'okline');
                 ok.appendChild(el('i'));
-                ok.appendChild(document.createTextNode(t.noWarn || ''));
+                ok.appendChild(document.createTextNode((t.level || 'Level') + ' 0 · ' + (t.noWarn || '')));
                 box.appendChild(ok);
                 return;
             }
@@ -666,6 +672,9 @@
                 row.appendChild(s);
                 var txt = el('div');
                 txt.appendChild(el('div', 't', w[1] || (t.levels && t.levels[w[0]]) || ''));
+                // Warnstufe als farbiges Schild, z. B. „Stufe 3 · Unwetterwarnung“
+                var lv = el('div', 'lv', (t.level || 'Level') + ' ' + w[0] + (t.levels && t.levels[w[0]] ? ' · ' + t.levels[w[0]] : ''));
+                txt.appendChild(lv);
                 if (w[2] || (i === 0 && list.length > 1)) {
                     var p = el('div', 'p', w[2] || '');
                     // bei wenig Platz steht nur die schwerste Warnung da – Anzahl der übrigen anzeigen
