@@ -67,6 +67,7 @@
         container: tile / size;
         overflow: hidden;
         border-radius: inherit;
+        --hdr: clamp(34px, 11cqmin, 46px);
     }
     #sky { position: absolute; inset: 0; display: none; pointer-events: none; }
     #wrap {
@@ -77,7 +78,8 @@
         grid-template-rows: auto auto auto auto minmax(0, 1fr) auto;
         grid-template-areas: "hero" "chips" "warn" "hourly" "daily" "foot";
         gap: 10px;
-        padding: clamp(10px, 4cqmin, 16px);
+        /* oben Platz für Titel und Vergrößern-Symbol, die Symcon über die Kachel legt */
+        padding: var(--hdr) clamp(10px, 4cqmin, 16px) clamp(10px, 4cqmin, 16px);
     }
 
     /* ---------- Aktuelles Wetter ---------- */
@@ -194,14 +196,16 @@
         .warn:not(:first-child) { display: none; }
         .warn .cnt { display: inline; }
     }
-    @container tile (max-height: 480px) and (min-width: 560px) { #daily { display: flex; } }
+    @container tile (max-height: 480px) and (min-width: 640px) { #daily { display: flex; } }
+    /* wenig Höhe: Kurzwerte weglassen, damit Warnung und Stunden ganz sichtbar bleiben */
+    @container tile (max-height: 420px) { .chips { display: none; } }
     @container tile (max-width: 230px) {
         .side .name, .hilo { display: none; }
         .hero { flex-wrap: wrap; }
         .side { margin-left: 0; text-align: left; width: 100%; }
     }
     @container tile (max-height: 420px) { .warns .okline { display: none; } }
-    @container tile (min-width: 560px) {
+    @container tile (min-width: 640px) {
         #wrap {
             grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
             grid-template-rows: auto auto minmax(0, 1fr) auto auto;
@@ -210,7 +214,7 @@
         }
         .warns { overflow-y: auto; align-content: start; }
     }
-    @container tile (min-width: 560px) and (max-height: 215px) {
+    @container tile (min-width: 640px) and (max-height: 215px) {
         #wrap { grid-template-areas: "hero warn" "chips daily" "warn daily" "hourly hourly" "foot foot"; }
     }
 
@@ -241,6 +245,77 @@
     #sky[data-s="rain-0"],
     #sky[data-s="snow-0"]    { background: linear-gradient(180deg, #151e29 0%, #2a3746 100%); }
     #sky[data-s="thunder-0"] { background: linear-gradient(180deg, #16142a 0%, #2f2747 100%); }
+    #sky[data-s="clear-1"]   { background: linear-gradient(180deg, #1660bd 0%, #3b8de0 55%, #8cc0ea 88%, #e9c98f 100%); }
+
+    /* Szene: Sterne, Sonnen-/Mondschein, Wolken, Niederschlag – nur im Farbschema „Wetter“ */
+    #sky > div { position: absolute; inset: 0; opacity: 0; transition: opacity .8s; }
+    #sky .stars {
+        background-image:
+            radial-gradient(1.2px 1.2px at 8% 12%, #fff, transparent), radial-gradient(1px 1px at 22% 30%, #fff, transparent),
+            radial-gradient(1.4px 1.4px at 37% 8%, #fff, transparent), radial-gradient(1px 1px at 52% 22%, #fff, transparent),
+            radial-gradient(1.2px 1.2px at 66% 6%, #fff, transparent), radial-gradient(1px 1px at 78% 26%, #fff, transparent),
+            radial-gradient(1.5px 1.5px at 91% 14%, #fff, transparent), radial-gradient(1px 1px at 14% 48%, #fff, transparent),
+            radial-gradient(1.2px 1.2px at 46% 42%, #fff, transparent), radial-gradient(1px 1px at 72% 50%, #fff, transparent),
+            radial-gradient(1px 1px at 30% 62%, #fff, transparent), radial-gradient(1.2px 1.2px at 86% 64%, #fff, transparent);
+        animation: twinkle 5s ease-in-out infinite alternate;
+    }
+    #sky .glow { background: radial-gradient(circle at 86% 4%, rgba(255, 238, 180, .75) 0, rgba(255, 214, 120, .32) 14%, rgba(255, 214, 120, 0) 46%); }
+    #sky .clouds {
+        inset: -10% -15%;
+        background:
+            radial-gradient(ellipse 26% 10% at 18% 16%, rgba(255, 255, 255, .55), transparent 70%),
+            radial-gradient(ellipse 20% 8% at 30% 12%, rgba(255, 255, 255, .45), transparent 70%),
+            radial-gradient(ellipse 30% 11% at 72% 30%, rgba(255, 255, 255, .45), transparent 70%),
+            radial-gradient(ellipse 24% 9% at 58% 52%, rgba(255, 255, 255, .3), transparent 70%),
+            radial-gradient(ellipse 34% 12% at 26% 74%, rgba(255, 255, 255, .28), transparent 70%),
+            radial-gradient(ellipse 28% 10% at 84% 86%, rgba(255, 255, 255, .25), transparent 70%);
+        filter: blur(4px);
+        animation: clouds 60s ease-in-out infinite alternate;
+    }
+    #sky .fx { inset: -20% 0 0 0; }
+
+    #sky[data-s$="-0"] .stars { opacity: .8; }
+    #sky[data-s^="cloudy-0"] .stars, #sky[data-s^="fog-0"] .stars, #sky[data-s^="rain-0"] .stars,
+    #sky[data-s^="drizzle-0"] .stars, #sky[data-s^="snow-0"] .stars, #sky[data-s^="thunder-0"] .stars { opacity: .15; }
+    #sky[data-s="clear-1"] .glow { opacity: 1; }
+    #sky[data-s="partly-1"] .glow { opacity: .7; }
+    #sky[data-s="clear-0"] .glow, #sky[data-s="partly-0"] .glow { opacity: .35; filter: hue-rotate(180deg) saturate(.3); }
+    #sky[data-s^="partly"] .clouds { opacity: .9; }
+    #sky[data-s^="cloudy"] .clouds, #sky[data-s^="fog"] .clouds { opacity: 1; filter: blur(6px) brightness(.85); }
+    #sky[data-s^="rain"] .clouds, #sky[data-s^="drizzle"] .clouds, #sky[data-s^="snow"] .clouds { opacity: .6; filter: blur(6px) brightness(.7); }
+    #sky[data-s^="thunder"] .clouds { opacity: .55; filter: blur(6px) brightness(.45); }
+    #sky[data-s$="-0"] .clouds { filter: blur(6px) brightness(.35); }
+
+    #sky[data-s^="rain"] .fx, #sky[data-s^="thunder"] .fx, #sky[data-s^="drizzle"] .fx {
+        opacity: 1;
+        background: repeating-linear-gradient(104deg, transparent 0 13px, rgba(205, 225, 255, .2) 13px 14px);
+        background-size: 100% 90px;
+        animation: rain .5s linear infinite;
+    }
+    #sky[data-s^="drizzle"] .fx { opacity: .55; animation-duration: .9s; }
+    #sky[data-s^="snow"] .fx {
+        opacity: 1;
+        background:
+            radial-gradient(2px 2px at 20% 20%, rgba(255, 255, 255, .85), transparent),
+            radial-gradient(1.6px 1.6px at 70% 45%, rgba(255, 255, 255, .7), transparent),
+            radial-gradient(2.2px 2.2px at 45% 80%, rgba(255, 255, 255, .8), transparent),
+            radial-gradient(1.4px 1.4px at 90% 10%, rgba(255, 255, 255, .6), transparent);
+        background-size: 70px 70px;
+        animation: snow 7s linear infinite;
+    }
+    #sky[data-s^="fog"] .fx {
+        opacity: 1;
+        background: repeating-linear-gradient(180deg, transparent 0 22px, rgba(235, 240, 245, .16) 22px 40px, transparent 40px 64px);
+        filter: blur(5px);
+        animation: clouds 30s ease-in-out infinite alternate;
+    }
+    #sky[data-s^="thunder"] .glow { opacity: 1; background: rgba(220, 225, 255, .5); animation: flash 9s linear infinite; }
+
+    @keyframes twinkle { from { filter: brightness(.55); } to { filter: brightness(1.25); } }
+    @keyframes clouds { from { transform: translateX(-4%); } to { transform: translateX(4%); } }
+    @keyframes rain { to { background-position: -24px 90px; } }
+    @keyframes snow { to { background-position: 14px 70px, -10px 70px, 6px 70px, -6px 70px; } }
+    @keyframes flash { 0%, 61%, 63.5%, 65%, 100% { opacity: 0; } 62%, 64% { opacity: .9; } }
 
     /* ---------- Bewegung (ruht, wenn die Kachel nicht sichtbar ist) ---------- */
     .hero .rays { transform-origin: 32px 32px; animation: spin 60s linear infinite; }
@@ -322,7 +397,7 @@
 </svg>
 
 <div id="tile">
-    <div id="sky" aria-hidden="true"></div>
+    <div id="sky" aria-hidden="true"><div class="stars"></div><div class="glow"></div><div class="clouds"></div><div class="fx"></div></div>
     <div id="wrap">
         <div class="hero">
             <svg class="wx" id="heroIcon" viewBox="0 0 64 64" role="img"></svg>
@@ -633,6 +708,17 @@
                 requestAction('TileRefresh', true);
             }
         });
+
+        // Große Kacheln (z. B. Vollbild) gleichmäßig vergrößern statt Leerraum zu lassen
+        function updateScale() {
+            var w = tile.clientWidth, h = tile.clientHeight;
+            var scale = Math.max(1, Math.min(2.2, Math.min(w / 760, h / 540)));
+            var wrap = $('wrap');
+            wrap.style.zoom = scale > 1.05 ? String(scale) : '';
+            wrap.style.height = scale > 1.05 ? (h / scale) + 'px' : '';
+        }
+        if (window.ResizeObserver) { new ResizeObserver(updateScale).observe(tile); }
+        updateScale();
 
         // Animationen ruhen, wenn die Kachel nicht sichtbar ist
         var visible = true;
