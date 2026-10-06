@@ -311,6 +311,59 @@ call($id, 'Process', [forecast(), alerts([])]);
 ok(value($id, 'Pressure') === 1013.6 && value($id, 'UVIndex') === 2.4, 'Details befüllt');
 
 // ---------------------------------------------------------------------------
+echo 'DWD-Station' . PHP_EOL;
+function station(array $weather = [], int $age = 600): array
+{
+    return [
+        'weather' => $weather + [
+            'source_id'          => 6164,
+            'timestamp'          => gmdate('c', time() - $age),
+            'temperature'        => 13.6,
+            'dew_point'          => 9.1,
+            'relative_humidity'  => 74.0,
+            'pressure_msl'       => 1011.2,
+            'wind_speed_10'      => 7.2,
+            'wind_direction_10'  => 250,
+            'wind_gust_speed_10' => 18.0,
+            'precipitation_10'   => 0.2,
+            'cloud_cover'        => null,
+            'visibility'         => 31000,
+        ],
+        'sources' => [
+            ['id' => 6164, 'dwd_station_id' => '07367', 'wmo_station_id' => '10442', 'station_name' => 'Alfeld', 'observation_type' => 'current', 'distance' => 312.0],
+        ],
+    ];
+}
+ok(!exists($id, 'StationName'), 'Messstation standardmäßig aus');
+IPS_SetProperty($id, 'UseStation', true);
+IPS_ApplyChanges($id);
+ok(exists($id, 'StationName'), 'Variable „Messstation“ angelegt');
+call($id, 'Process', [forecast(), alerts([]), station()]);
+ok(value($id, 'Temperature') === 13.6, 'Temperatur von der Station');
+ok(value($id, 'ApparentTemperature') === 12.1, 'Gefühlte Temperatur mit Abstand des Modells (12,34 → 10,8)');
+ok(value($id, 'Humidity') === 74 && value($id, 'DewPoint') === 9.1 && value($id, 'Pressure') === 1011.2, 'Feuchte, Taupunkt, Luftdruck von der Station');
+ok(value($id, 'WindSpeed') === 7.2 && value($id, 'WindGusts') === 18.0 && value($id, 'WindDirection') === 250, 'Wind von der Station');
+ok(value($id, 'Precipitation') === 0.2 && value($id, 'Visibility') === 31.0, 'Niederschlag und Sichtweite von der Station');
+ok(value($id, 'CloudCover') === 45, 'Fehlender Stationswert (Bewölkung) bleibt beim Modell');
+ok(value($id, 'StationName') === 'Measured: Alfeld · 0.3 km', 'Messstation mit Entfernung');
+$tile = json_decode(call($id, 'ReadAttributeString', ['TileData']), true);
+ok($tile['station'] === "Measured: Alfeld · 0.3\u{00A0}km" && $tile['now']['temp'] === 13.6, 'Kachel zeigt Station und Messwert');
+ok(json_decode(WETTER_GetForecast($id), true)['station']['id'] === '07367', 'GetForecast nennt die Station');
+IPS_SetProperty($id, 'WindUnit', 'ms');
+IPS_ApplyChanges($id);
+call($id, 'Process', [forecast(), alerts([]), station()]);
+ok(value($id, 'WindSpeed') === 2.0 && value($id, 'WindGusts') === 5.0, 'Stationswind in m/s umgerechnet');
+IPS_SetProperty($id, 'WindUnit', 'kmh');
+IPS_ApplyChanges($id);
+call($id, 'Process', [forecast(), alerts([]), station([], 3 * 3600)]);
+ok(value($id, 'Temperature') === 12.3 && str_contains((string) value($id, 'StationName'), 'model values'), 'Veraltete Messwerte: Modellwerte');
+call($id, 'Process', [forecast(), alerts([]), null]);
+ok(value($id, 'Temperature') === 12.3, 'Ohne Stationsantwort: Modellwerte');
+IPS_SetProperty($id, 'UseStation', false);
+IPS_ApplyChanges($id);
+ok(!exists($id, 'StationName'), 'Abgeschaltet: Variable entfernt');
+
+// ---------------------------------------------------------------------------
 echo 'Fehlerfälle' . PHP_EOL;
 call($id, 'WriteAttributeInteger', ['FailCount', 0]);
 for ($i = 0; $i < 3; $i++) {

@@ -20,6 +20,10 @@ class Wetter extends IPSModuleStrict
 
     private const FORECAST_URL = 'https://api.open-meteo.com/v1/forecast';
     private const ALERTS_URL = 'https://api.brightsky.dev/alerts';
+    private const STATION_URL = 'https://api.brightsky.dev/current_weather';
+
+    // Stationswerte gelten nur, wenn sie höchstens so alt sind (Sekunden)
+    private const STATION_MAX_AGE = 7200;
 
     private const MODELS = ['best_match', 'icon_seamless', 'ecmwf_ifs025', 'gfs_seamless', 'meteofrance_seamless', 'metno_seamless'];
     private const WIND_UNITS = ['kmh' => ' km/h', 'ms' => ' m/s', 'kn' => ' kn'];
@@ -72,6 +76,10 @@ class Wetter extends IPSModuleStrict
         $this->RegisterPropertyInteger('Interval', 15);
         $this->RegisterPropertyString('WindUnit', 'kmh');
 
+        // Messwerte einer DWD-Station
+        $this->RegisterPropertyBoolean('UseStation', false);
+        $this->RegisterPropertyInteger('StationMaxDistance', 10);
+
         // Variablen
         $this->RegisterPropertyBoolean('ShowDetails', false);
         $this->RegisterPropertyBoolean('ShowSun', true);
@@ -112,6 +120,7 @@ class Wetter extends IPSModuleStrict
             'sun'      => $this->ReadPropertyBoolean('ShowSun'),
             'forecast' => $this->ReadPropertyBoolean('ShowForecast'),
             'warnings' => $this->ReadPropertyBoolean('ShowWarnings'),
+            'station'  => $this->ReadPropertyBoolean('UseStation'),
         ];
         foreach ($this->VariableTable() as [$ident, $name, $type, $kind, $icon, $position, $group]) {
             $keep = $groups[$group];
@@ -173,6 +182,13 @@ class Wetter extends IPSModuleStrict
             : sprintf($this->Translate('Use the location of Symcon (%s, %s)'), number_format($symcon[0], 4, ',', ''), number_format($symcon[1], 4, ',', ''));
         $this->InjectProperty($form['elements'], 'UseSymconLocation', 'caption', $caption);
         $this->InjectProperty($form['elements'], 'Location', 'visible', !$this->ReadPropertyBoolean('UseSymconLocation'));
+
+        // zuletzt genutzte Messstation anzeigen
+        $station = json_decode($this->GetBuffer('Station'), true);
+        if ($this->ReadPropertyBoolean('UseStation') && is_array($station)) {
+            $this->InjectProperty($form['elements'], 'StationInfo', 'caption', $this->StationLabel($station) . ($station['id'] !== '' ? ' (DWD ' . $station['id'] . ')' : ''));
+            $this->InjectProperty($form['elements'], 'StationInfo', 'visible', true);
+        }
         return (string) json_encode($form);
     }
 
@@ -203,7 +219,19 @@ class Wetter extends IPSModuleStrict
             }
         }
 
-        return $this->Process($forecast, $alerts);
+        $station = null;
+        if ($this->ReadPropertyBoolean('UseStation')) {
+            $station = $this->HttpGetJson(self::STATION_URL . '?' . http_build_query([
+                'lat'      => $lat,
+                'lon'      => $lon,
+                'max_dist' => $this->StationMaxDistance() * 1000,
+            ]), $error);
+            if ($station === null) {
+                $this->SendDebug('Station', 'Bright Sky: ' . $error . ' – Modellwerte werden verwendet', 0);
+            }
+        }
+
+        return $this->Process($forecast, $alerts, $station);
     }
 
     /**
@@ -233,8 +261,9 @@ class Wetter extends IPSModuleStrict
      *
      * @param array      $forecast Antwort von Open-Meteo
      * @param array|null $alerts   Antwort von Bright Sky (null = nicht abgefragt oder fehlgeschlagen)
+     * @param array|null $station  Messwerte der DWD-Station von Bright Sky (null = nicht genutzt oder fehlgeschlagen)
      */
-    private function Process(array $forecast, ?array $alerts): bool
+    private function Process(array $forecast, ?array $alerts, ?array $station = null): bool
     {
         $current = $forecast['current'] ?? null;
         $daily = $forecast['daily'] ?? [];
@@ -264,6 +293,9 @@ class Wetter extends IPSModuleStrict
             'Visibility'          => round((float) ($current['visibility'] ?? 0) / 1000, 1),
             'UVIndex'             => round((float) ($current['uv_index'] ?? 0), 1),
         ];
+
+        // Gemessene Werte der DWD-Station haben Vorrang vor dem Wettermodell
+        $stationInfo = $this->ApplyStation($station, $values);
 
         // Tageswerte (Index 0 = heute am Standort)
         $day = static function (string $key, int $index) use ($daily): mixed {
@@ -318,6 +350,9 @@ class Wetter extends IPSModuleStrict
         $values['WarningLevel'] = $warnings['level'];
         $values['WarningCount'] = count($warnings['list']);
         $values['WarningText'] = $warnings['text'];
+        $values['StationName'] = $stationInfo !== null
+            ? $this->StationLabel($stationInfo)
+            : $this->Translate('no current measured values – model values are used');
 
         foreach ($values as $ident => $value) {
             $this->SetValueIfChanged($ident, $value);
@@ -351,9 +386,10 @@ class Wetter extends IPSModuleStrict
             'hourly'    => $hours,
             'daily'     => $days,
             'warnings'  => $warnings['list'],
+            'station'   => $stationInfo,
         ]));
 
-        $this->PushTile($this->BuildTile($values, $isDay, $hours, $days, $warnings, $offset));
+        $this->PushTile($this->BuildTile($values, $isDay, $hours, $days, $warnings, $offset, $stationInfo));
 
         $this->WriteAttributeInteger('FailCount', 0);
         if ($this->GetStatus() !== 102) {
@@ -443,7 +479,7 @@ class Wetter extends IPSModuleStrict
     /**
      * Baut die Daten für die Kachel.
      */
-    private function BuildTile(array $values, bool $isDay, array $hours, array $days, array $warnings, int $offset): array
+    private function BuildTile(array $values, bool $isDay, array $hours, array $days, array $warnings, int $offset, ?array $station): array
     {
         $german = $this->Language() === 'de';
         $weekdays = $german ? ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'] : ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -454,7 +490,8 @@ class Wetter extends IPSModuleStrict
                 $i === 0 ? $this->Translate('Now') : gmdate('H', $hour['time'] + $offset),
                 $hour['code'],
                 $hour['day'] ? 1 : 0,
-                $hour['temp'],
+                // „Jetzt“ zeigt denselben Wert wie oben (bei DWD-Station den gemessenen)
+                $i === 0 ? $values['Temperature'] : $hour['temp'],
                 $hour['prob'],
             ];
         }
@@ -475,6 +512,8 @@ class Wetter extends IPSModuleStrict
             'theme' => $this->ReadPropertyInteger('TileTheme'),
             'lang'  => $german ? 'de' : 'en',
             'name'  => $name,
+            // geschütztes Leerzeichen, damit „0,3 km“ nicht auseinanderbricht
+            'station' => $station !== null ? str_replace(' km', "\u{00A0}km", $this->StationLabel($station)) : '',
             'now'   => [
                 'temp'   => $values['Temperature'],
                 'feels'  => $values['ApparentTemperature'],
@@ -526,7 +565,7 @@ class Wetter extends IPSModuleStrict
                 'more'      => $this->Translate('Details'),
                 'less'      => $this->Translate('Less'),
                 'refresh'   => $this->Translate('Update now'),
-                'source'    => $warnings['outside'] || !$this->WarningsWanted() ? 'Open-Meteo' : 'Open-Meteo · DWD',
+                'source'    => $station !== null || (!$warnings['outside'] && $this->WarningsWanted()) ? 'Open-Meteo · DWD' : 'Open-Meteo',
                 'levels'    => ['', $this->Translate('Weather warning'), $this->Translate('Warning of markedly severe weather'), $this->Translate('Severe weather warning'), $this->Translate('Warning of extreme weather')],
             ],
         ];
@@ -722,6 +761,8 @@ class Wetter extends IPSModuleStrict
             ['WarningLevel', 'Warning level', VARIABLETYPE_INTEGER, 'warnlevel', 'triangle-exclamation', 70, 'warnings'],
             ['WarningCount', 'Number of warnings', VARIABLETYPE_INTEGER, 'count', 'triangle-exclamation', 71, 'warnings'],
             ['WarningText', 'Warnings', VARIABLETYPE_STRING, 'multiline', 'triangle-exclamation', 72, 'warnings'],
+
+            ['StationName', 'Measuring station', VARIABLETYPE_STRING, 'text', 'tower-broadcast', 80, 'station'],
         ];
     }
 
@@ -750,6 +791,8 @@ class Wetter extends IPSModuleStrict
                 return ['PRESENTATION' => $value, 'ICON' => $icon, 'SUFFIX' => ' h', 'DIGITS' => 1];
             case 'plain':
                 return ['PRESENTATION' => $value, 'ICON' => $icon, 'DIGITS' => 1];
+            case 'text':
+                return ['PRESENTATION' => $value, 'ICON' => $icon];
             case 'count':
                 return ['PRESENTATION' => $value, 'ICON' => $icon, 'DIGITS' => 0];
             case 'multiline':
@@ -827,6 +870,101 @@ class Wetter extends IPSModuleStrict
     // ------------------------------------------------------------------
     // Hilfsfunktionen
     // ------------------------------------------------------------------
+
+    /**
+     * Übernimmt die Messwerte der DWD-Station in $values (nur frische, vorhandene Werte).
+     *
+     * @return array{name:string,id:string,distance:float,time:int}|null Angaben zur Station oder null
+     */
+    private function ApplyStation(?array $response, array &$values): ?array
+    {
+        // nicht genutzt oder Abruf fehlgeschlagen: Modellwerte bleiben stehen
+        if ($response === null) {
+            return null;
+        }
+        $weather = $response['weather'] ?? null;
+        if (!is_array($weather)) {
+            return null;
+        }
+        $time = $this->ParseTime($weather['timestamp'] ?? null);
+        if ($time === 0 || time() - $time > self::STATION_MAX_AGE) {
+            $this->SendDebug('Station', 'Messwerte zu alt oder ohne Zeitstempel – Modellwerte werden verwendet', 0);
+            return null;
+        }
+
+        $source = null;
+        foreach ((array) ($response['sources'] ?? []) as $s) {
+            if (is_array($s) && (int) ($s['id'] ?? 0) === (int) ($weather['source_id'] ?? -1)) {
+                $source = $s;
+                break;
+            }
+        }
+
+        $pick = static function (array $keys) use ($weather): ?float {
+            foreach ($keys as $key) {
+                if (isset($weather[$key]) && is_numeric($weather[$key])) {
+                    return (float) $weather[$key];
+                }
+            }
+            return null;
+        };
+        $factor = ['kmh' => 1.0, 'ms' => 1 / 3.6, 'kn' => 1 / 1.852][$this->WindUnit()];
+
+        $temperature = $pick(['temperature']);
+        if ($temperature !== null) {
+            // gefühlte Temperatur: Abstand des Modells auf den Messwert übertragen
+            $values['ApparentTemperature'] = round($temperature + ($values['ApparentTemperature'] - $values['Temperature']), 1);
+            $values['Temperature'] = round($temperature, 1);
+        }
+        if (($v = $pick(['relative_humidity'])) !== null) {
+            $values['Humidity'] = (int) round($v);
+        }
+        if (($v = $pick(['dew_point'])) !== null) {
+            $values['DewPoint'] = round($v, 1);
+        }
+        if (($v = $pick(['pressure_msl'])) !== null) {
+            $values['Pressure'] = round($v, 1);
+        }
+        if (($v = $pick(['wind_speed_10', 'wind_speed_30', 'wind_speed_60'])) !== null) {
+            $values['WindSpeed'] = round($v * $factor, 1);
+        }
+        if (($v = $pick(['wind_gust_speed_10', 'wind_gust_speed_30', 'wind_gust_speed_60'])) !== null) {
+            $values['WindGusts'] = round($v * $factor, 1);
+        }
+        if (($v = $pick(['wind_direction_10', 'wind_direction_30', 'wind_direction_60'])) !== null) {
+            $values['WindDirection'] = (int) round($v) % 360;
+        }
+        if (($v = $pick(['precipitation_10', 'precipitation_30'])) !== null) {
+            $values['Precipitation'] = round($v, 1);
+        }
+        if (($v = $pick(['cloud_cover'])) !== null) {
+            $values['CloudCover'] = (int) round($v);
+        }
+        if (($v = $pick(['visibility'])) !== null) {
+            $values['Visibility'] = round($v / 1000, 1);
+        }
+        $values['DataTime'] = $time;
+
+        $info = [
+            'name'     => trim((string) ($source['station_name'] ?? '')),
+            'id'       => (string) ($source['dwd_station_id'] ?? $source['wmo_station_id'] ?? ''),
+            'distance' => round((float) ($source['distance'] ?? 0) / 1000, 1),
+            'time'     => $time,
+        ];
+        $this->SetBuffer('Station', (string) json_encode($info));
+        return $info;
+    }
+
+    private function StationLabel(array $station): string
+    {
+        $name = $station['name'] !== '' ? $station['name'] : $this->Translate('DWD station');
+        return sprintf($this->Translate('Measured: %s · %s km'), $name, number_format((float) $station['distance'], 1, $this->Language() === 'de' ? ',' : '.', ''));
+    }
+
+    private function StationMaxDistance(): int
+    {
+        return max(1, min(50, $this->ReadPropertyInteger('StationMaxDistance')));
+    }
 
     private function WarningsWanted(): bool
     {
