@@ -226,6 +226,23 @@
     @container tile (max-height: 480px) and (min-width: 640px) { #daily { display: flex; } }
     /* wenig Höhe: Kurzwerte weglassen, damit Warnung und Stunden ganz sichtbar bleiben */
     @container tile (max-height: 420px) { .chips { display: none; } }
+    /* flache Kacheln (z. B. Handy quer): Stundenleiste kompakt, Fußzeile weg */
+    @container tile (max-height: 300px) {
+        .foot, #hourly h3, .hour .r { display: none; }
+        #wrap { gap: 6px; }
+        .hour { padding: 2px 0; gap: 1px; width: 44px; }
+        .hour .wx { width: 22px; height: 22px; }
+        .hour .v { font-size: 13px; }
+        .warn { padding: 4px 8px; }
+        .warn .p, .warn button { display: none; }
+        .warn:not(:first-child) { display: none; }
+    }
+    /* sehr flach: von der Warnung nur das Stufen-Schild, damit die Stunden ganz sichtbar bleiben */
+    @container tile (max-height: 260px) {
+        .warn .t { display: none; }
+        .warn { padding: 3px 8px; }
+        .warn .lv { margin: 0; }
+    }
     #tile.showsun .sunarc { display: block; }
     #tile.showsun.nosun .sunarc { display: none; }
     @container tile (max-width: 230px) {
