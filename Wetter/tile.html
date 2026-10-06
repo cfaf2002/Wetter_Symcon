@@ -89,7 +89,9 @@
     .temp sup { font-size: .45em; font-weight: 400; vertical-align: .9em; margin-left: 1px; color: var(--muted); }
     .side { min-width: 0; display: flex; flex-direction: column; gap: 3px; margin-left: auto; text-align: right; }
     .name { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .cond { font-size: clamp(14px, 5cqmin, 17px); font-weight: 600; line-height: 1.2; }
+    .cond { font-size: clamp(14px, 5cqmin, 17px); font-weight: 600; line-height: 1.2; overflow-wrap: anywhere; hyphens: auto; }
+    .side { max-width: 48%; }
+    #tile.nocurve .hour .cv, #tile.nocurve .hours > svg.curve, #tile.nochips .chips, #tile.nohourly #hourly { display: none !important; }
     .hilo { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
     .hilo b { color: var(--fg); font-weight: 600; }
     .station { font-size: 11.5px; line-height: 1.3; color: var(--muted); max-height: 2.6em; overflow: hidden; }
@@ -979,12 +981,23 @@
         }
         setInterval(function () { if (!document.hidden) { renderSun(); } }, 60000);
 
-        // Sonnenbogen nur zeigen, wenn er ohne Abschneiden in die Spalte passt
+        // Platz verteilen: Sonnenbogen nur ohne Abschneiden, und mindestens 5 Tage sichtbar halten.
+        // Reicht der Platz nicht, entfallen der Reihe nach Sonnenbogen, Kurve, Kurzwerte und Stundenleiste.
+        var FIT_STEPS = ['nosun', 'nocurve', 'nochips', 'nohourly'];
+        function daysFit() {
+            var sec = $('daily'), box = $('days');
+            if (!box.children.length || getComputedStyle(sec).display === 'none') { return true; }
+            var need = Math.min(box.children.length, 5);
+            return box.clientHeight >= need * 36 - 2;
+        }
         function fitSun() {
+            FIT_STEPS.forEach(function (c) { tile.classList.remove(c); });
             var mid = document.querySelector('.mid');
-            tile.classList.remove('nosun');
             if (tile.classList.contains('showsun') && mid.scrollHeight > mid.clientHeight + 1) {
                 tile.classList.add('nosun');
+            }
+            for (var i = 0; i < FIT_STEPS.length && !daysFit(); i++) {
+                tile.classList.add(FIT_STEPS[i]);
             }
         }
 
@@ -1264,10 +1277,10 @@
             renderSun();
 
             renderWarnings(d, t);
-            fitSun();
             renderHours(d, t);
             renderDays(d, t);
             renderLong(d, t);
+            fitSun();
 
             $('foot').textContent = (t.source || '') + ' · ' + (d.updated || '');
             $('refresh').setAttribute('aria-label', t.refresh || '');

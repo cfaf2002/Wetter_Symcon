@@ -2,7 +2,7 @@
 
 [![IP-Symcon ab 8.1](https://img.shields.io/badge/IP--Symcon-ab_8.1-0b6fb3.svg)](https://www.symcon.de)
 [![Optimiert für Symcon 9.0](https://img.shields.io/badge/optimiert_f%C3%BCr-Symcon_9.0-0b6fb3.svg)](https://www.symcon.de/de/service/dokumentation/installation/migrationen/v81-v90-q1-2026/)
-[![Modul-Version 1.3 (Build 12)](https://img.shields.io/badge/Modul--Version-1.3_(Build_12)-informational.svg)](library.json)
+[![Modul-Version 1.3 (Build 13)](https://img.shields.io/badge/Modul--Version-1.3_(Build_13)-informational.svg)](library.json)
 [![Tests](https://github.com/cfaf2002/Wetter_Symcon/actions/workflows/tests.yml/badge.svg)](https://github.com/cfaf2002/Wetter_Symcon/actions/workflows/tests.yml)
 [![PHP 8.3 und 8.5](https://img.shields.io/badge/PHP-8.3_%7C_8.5-777bb4.svg?logo=php&logoColor=white)](https://www.php.net)
 [![SDK: IPSModuleStrict](https://img.shields.io/badge/SDK-IPSModuleStrict-success.svg)](https://www.symcon.de/de/service/dokumentation/entwicklerbereich/sdk-tools/sdk-php/module/)
@@ -90,6 +90,7 @@ Ein Ausfall des Abrufs wird zweimal still überbrückt; erst ab dem dritten Fehl
 | flach (z. B. Handy quer) | aktuelles Wetter, Warnstufe als Schild und kompakte Stundenleiste |
 | klein (1×1) | Symbol, Temperatur, Wetterlage, schwerste Warnung |
 | mittel (2×2) | zusätzlich Kurzwerte, Stundenleiste, schwerste Warnung mit Zahl der weiteren |
+| Handy hochkant | die Kachel hält mindestens 5 Tage sichtbar und lässt dafür bei Bedarf Sonnenbogen, Temperaturkurve, Kurzwerte und zuletzt die Stundenleiste weg |
 | hoch (2×4) | zusätzlich alle Warnungen und die Tagesübersicht |
 | breit (4×2) | zweispaltig: links aktuelles Wetter und Warnungen, rechts die Tage, unten die Stunden |
 
@@ -167,6 +168,7 @@ Die Kachel nennt beide Quellen in der Fußzeile.
 
 | Version | Build | Datum | Beschreibung |
 | :-- | --: | :-- | :-- |
+| 1.3 | 13 | 06.10.2026 | Kachel hält mindestens 5 Tage sichtbar (blendet bei Platzmangel Sonnenbogen, Kurve, Kurzwerte, Stunden aus); lange Wetterlagen brechen sauber um |
 | 1.3 | 12 | 06.10.2026 | Neu: 14-Tage-Vorhersage über die Schaltfläche „14 Tage“ in der Kachel; GetForecast liefert 14 Tage |
 | 1.2 | 11 | 06.10.2026 | Farbschema „Wetter“: natürliche Wolken (weiche Dunstballen mit Schatten) statt Symbol-Wolken |
 | 1.2 | 10 | 06.10.2026 | Farbschema „Wetter“: echte ziehende Wolken je nach Wetterlage, Regenwolken, Blitze bei Gewitter |
