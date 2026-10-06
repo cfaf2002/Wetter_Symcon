@@ -2,7 +2,7 @@
 
 [![IP-Symcon ab 8.1](https://img.shields.io/badge/IP--Symcon-ab_8.1-0b6fb3.svg)](https://www.symcon.de)
 [![Optimiert für Symcon 9.0](https://img.shields.io/badge/optimiert_f%C3%BCr-Symcon_9.0-0b6fb3.svg)](https://www.symcon.de/de/service/dokumentation/installation/migrationen/v81-v90-q1-2026/)
-[![Modul-Version 1.2 (Build 9)](https://img.shields.io/badge/Modul--Version-1.2_(Build_9)-informational.svg)](library.json)
+[![Modul-Version 1.2 (Build 10)](https://img.shields.io/badge/Modul--Version-1.2_(Build_10)-informational.svg)](library.json)
 [![Tests](https://github.com/cfaf2002/Wetter_Symcon/actions/workflows/tests.yml/badge.svg)](https://github.com/cfaf2002/Wetter_Symcon/actions/workflows/tests.yml)
 [![PHP 8.3 und 8.5](https://img.shields.io/badge/PHP-8.3_%7C_8.5-777bb4.svg?logo=php&logoColor=white)](https://www.php.net)
 [![SDK: IPSModuleStrict](https://img.shields.io/badge/SDK-IPSModuleStrict-success.svg)](https://www.symcon.de/de/service/dokumentation/entwicklerbereich/sdk-tools/sdk-php/module/)
@@ -92,7 +92,7 @@ Ein Ausfall des Abrufs wird zweimal still überbrückt; erst ab dem dritten Fehl
 | hoch (2×4) | zusätzlich alle Warnungen und die Tagesübersicht |
 | breit (4×2) | zweispaltig: links aktuelles Wetter und Warnungen, rechts die Tage, unten die Stunden |
 
-**Farbschema der Kachel:** *Symcon-Design* (Farben der Visualisierung, kein eigener Hintergrund), *Dunkel*, *Hell* und *Wetter* – eine Himmels-Szene passend zu Wetterlage und Tageszeit (Sonnenschein, ziehende Wolken, Regen, Schnee, Nebel, Gewitterblitze, Sterne), darauf immer helle Schrift. Im *Symcon-Design* hat die Kachel bewusst keinen eigenen Hintergrund – dort ist die Kachelfarbe der Visualisierung zu sehen.
+**Farbschema der Kachel:** *Symcon-Design* (Farben der Visualisierung, kein eigener Hintergrund), *Dunkel*, *Hell* und *Wetter* – eine lebendige Himmels-Szene passend zu Wetterlage und Tageszeit: klarer Himmel mit Sonnenschein, über die Kachel ziehende Wolken (mehr und dunkler, je trüber es ist), Regenwolken mit Regen, Schneefall, Nebel, Gewitter mit Blitzen und Wetterleuchten, nachts Sterne, darauf immer helle Schrift. Im *Symcon-Design* hat die Kachel bewusst keinen eigenen Hintergrund – dort ist die Kachelfarbe der Visualisierung zu sehen.
 
 Große Kacheln zeigen zusätzlich eine **Temperaturkurve** über der Stundenleiste und einen **Sonnenbogen** mit dem aktuellen Stand der Sonne (nachts des Mondes) und der verbleibenden Tageslichtdauer bzw. der Zeit bis Sonnenaufgang. Bei Temperaturänderungen zählt die Anzeige kurz hoch, bei böigem Wind pendelt der Windpfeil, im großen Symbol ziehen die Wolken, fallen Regen und Schnee und blitzt es bei Gewitter.
 
@@ -166,6 +166,7 @@ Die Kachel nennt beide Quellen in der Fußzeile.
 
 | Version | Build | Datum | Beschreibung |
 | :-- | --: | :-- | :-- |
+| 1.2 | 10 | 06.10.2026 | Farbschema „Wetter“: echte ziehende Wolken je nach Wetterlage, Regenwolken, Blitze bei Gewitter |
 | 1.2 | 9 | 06.10.2026 | Flache Kacheln (z. B. Handy im Querformat): kompakte Stundenleiste ohne Abschneiden, Warnung als Stufen-Schild |
 | 1.2 | 8 | 06.10.2026 | Lebendigere Kachel: Temperaturkurve, Sonnenbogen, ziehende Wolken, fallender Schnee, Blitze, pendelnder Windpfeil bei Böen, hochzählende Temperatur; große Kacheln nutzen den Platz besser |
 | 1.1 | 7 | 06.10.2026 | Kachel: Warnstufe als farbiges Schild an jeder Warnung, „Stufe 0“ ohne Warnung |

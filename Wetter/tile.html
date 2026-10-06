@@ -269,7 +269,7 @@
         --fg: #f6f9fc; --muted: rgba(246, 249, 252, .82); --faint: rgba(246, 249, 252, .68); --line: rgba(255, 255, 255, .18);
         --surface-hover: rgba(255, 255, 255, .22);
         --wx-cloud: #eef3f8; --wx-cloud2: rgba(238, 243, 248, .6); --wx-rain: #d3e8ff; --wx-cold: #bcdcff;
-        color: var(--fg); text-shadow: 0 1px 2px rgba(0, 0, 0, .18);
+        color: var(--fg); text-shadow: 0 1px 3px rgba(0, 0, 0, .35);
     }
     #tile.sky .day .r, #tile.sky .hour .r { color: #e3f0ff; }
     #tile.sky #sky { display: block; transition: background .8s; }
@@ -326,7 +326,7 @@
     #sky[data-s="clear-1"] .glow { opacity: 1; }
     #sky[data-s="partly-1"] .glow { opacity: .7; }
     #sky[data-s="clear-0"] .glow, #sky[data-s="partly-0"] .glow { opacity: .35; filter: hue-rotate(180deg) saturate(.3); }
-    #sky[data-s^="partly"] .clouds { opacity: .9; }
+    #sky[data-s^="partly"] .clouds { opacity: .4; }
     #sky[data-s^="cloudy"] .clouds, #sky[data-s^="fog"] .clouds { opacity: 1; filter: blur(6px) brightness(.85); }
     #sky[data-s^="rain"] .clouds, #sky[data-s^="drizzle"] .clouds, #sky[data-s^="snow"] .clouds { opacity: .6; filter: blur(6px) brightness(.7); }
     #sky[data-s^="thunder"] .clouds { opacity: .55; filter: blur(6px) brightness(.45); }
@@ -356,6 +356,15 @@
         animation: clouds 30s ease-in-out infinite alternate;
     }
     #sky[data-s^="thunder"] .glow { opacity: 1; background: rgba(220, 225, 255, .5); animation: flash 9s linear infinite; }
+
+    /* ziehende Wolken, Sonne/Mond und Blitz (werden je nach Wetterlage erzeugt) */
+    #sky > .fly, #sky > .orbit, #sky > .strike { opacity: 1; }
+    #sky .fly svg { position: absolute; left: 0; top: 0; overflow: visible; animation: fly var(--d) linear infinite; animation-delay: var(--dl); will-change: transform; }
+    #sky .orbit svg { position: absolute; overflow: visible; }
+    #sky .orbit .sunrays { transform-box: fill-box; transform-origin: center; animation: spin 90s linear infinite; }
+    #sky .strike svg { position: absolute; opacity: 0; animation: strike 9s linear infinite; animation-delay: var(--dl, 0s); filter: drop-shadow(0 0 6px rgba(255, 245, 190, .9)); }
+    @keyframes fly { from { transform: translate(-110%, var(--y)); } to { transform: translate(calc(100cqw + 10%), var(--y)); } }
+    @keyframes strike { 0%, 61%, 63.2%, 64.2%, 66%, 100% { opacity: 0; } 61.6%, 64.6% { opacity: 1; } }
 
     @keyframes twinkle { from { filter: brightness(.55); } to { filter: brightness(1.25); } }
     @keyframes clouds { from { transform: translateX(-4%); } to { transform: translateX(4%); } }
@@ -565,7 +574,7 @@
 </svg>
 
 <div id="tile">
-    <div id="sky" aria-hidden="true"><div class="stars"></div><div class="glow"></div><div class="clouds"></div><div class="fx"></div></div>
+    <div id="sky" aria-hidden="true"><div class="stars"></div><div class="glow"></div><div class="clouds"></div><div class="orbit" id="skyOrb"></div><div class="fly" id="skyFly"></div><div class="fx"></div><div class="strike" id="skyStrike"></div></div>
     <div id="wrap">
         <div class="hero">
             <svg class="wx" id="heroIcon" viewBox="0 0 64 64" role="img"></svg>
@@ -712,6 +721,67 @@
         }
 
         function clear(node) { while (node.firstChild) { node.removeChild(node.firstChild); } }
+
+        // Himmels-Szene im Farbschema „Wetter“: ziehende Wolken, Sonne/Mond, Blitze
+        var sceneKey = '';
+        function skySvg(id, w, h) {
+            var svg = document.createElementNS(SVG, 'svg');
+            svg.setAttribute('viewBox', '0 0 64 64');
+            svg.setAttribute('width', w);
+            svg.setAttribute('height', h || w);
+            var u = document.createElementNS(SVG, 'use');
+            u.setAttribute('href', '#' + id);
+            svg.appendChild(u);
+            return svg;
+        }
+        function buildScene(g, day, code) {
+            var key = g + day + (code >= 80 ? 's' : '');
+            if (key === sceneKey) { return; }
+            sceneKey = key;
+            var fly = $('skyFly'), orb = $('skyOrb'), strike = $('skyStrike');
+            clear(fly); clear(orb); clear(strike);
+            // Anzahl, Art und Tempo der Wolken je Wetterlage
+            var cfg = {
+                clear:   { n: day ? 1 : 0, id: 'p-cloud', op: .55, size: [70, 110] },
+                partly:  { n: 4, id: 'p-cloud', op: .9, size: [90, 170] },
+                cloudy:  { n: 7, id: 'p-cloudrain', op: .9, size: [130, 240] },
+                fog:     { n: 5, id: 'p-cloudrain', op: .5, size: [160, 260] },
+                drizzle: { n: 6, id: 'p-cloudrain', op: .85, size: [130, 220] },
+                rain:    { n: 7, id: 'p-cloudrain', op: .9, size: [140, 240] },
+                snow:    { n: 6, id: 'p-cloudrain', op: .8, size: [130, 220] },
+                thunder: { n: 7, id: 'p-clouddark', op: .95, size: [150, 260] }
+            }[g] || { n: 3, id: 'p-cloud', op: .8, size: [100, 180] };
+            if (!day && cfg.id === 'p-cloud') { cfg.op *= .45; }
+            for (var i = 0; i < cfg.n; i++) {
+                var w = cfg.size[0] + Math.random() * (cfg.size[1] - cfg.size[0]);
+                var c = skySvg(cfg.id, Math.round(w), Math.round(w * .62));
+                var dur = 70 + Math.random() * 70 - (g === 'thunder' || g === 'rain' ? 25 : 0);
+                c.style.setProperty('--d', dur.toFixed(0) + 's');
+                // negativer Versatz: Wolken sind sofort verteilt, nicht erst am linken Rand
+                c.style.setProperty('--dl', (-Math.random() * dur).toFixed(1) + 's');
+                c.style.setProperty('--y', (Math.random() * 55 - 15).toFixed(0) + 'cqh');
+                c.style.opacity = (cfg.op * .75 * (.7 + Math.random() * .3)).toFixed(2);
+                if (!day) { c.style.filter = 'brightness(.55)'; }
+                fly.appendChild(c);
+            }
+            // Gewitter: zwei Blitze an zufälligen Stellen
+            if (g === 'thunder') {
+                for (var k = 0; k < 2; k++) {
+                    var b = document.createElementNS(SVG, 'svg');
+                    b.setAttribute('viewBox', '0 0 40 100');
+                    b.setAttribute('width', 46);
+                    b.setAttribute('height', 115);
+                    var bp = document.createElementNS(SVG, 'path');
+                    bp.setAttribute('d', 'M24 0 8 46h12L6 100 36 38H22L32 0z');
+                    bp.setAttribute('fill', '#fff7c2');
+                    b.appendChild(bp);
+                    b.style.left = (15 + Math.random() * 65).toFixed(0) + '%';
+                    b.style.top = (8 + Math.random() * 25).toFixed(0) + '%';
+                    b.style.setProperty('--dl', (-k * 4.3).toFixed(1) + 's');
+                    strike.appendChild(b);
+                }
+            }
+        }
 
         // Temperatur: bei Änderung kurz hochzählen
         var shownTemp = null;
@@ -975,6 +1045,7 @@
             var n = d.now;
             var g = group(n.code);
             $('sky').setAttribute('data-s', g + '-' + (n.day ? 1 : 0));
+            if (theme === 3) { buildScene(g, n.day ? 1 : 0, n.code); }
             var hero = icon(n.code, n.day, $('heroIcon'), true);
             hero.setAttribute('aria-label', n.cond || '');
             showTemp(Math.round(n.temp));
