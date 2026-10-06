@@ -2,7 +2,7 @@
 
 [![IP-Symcon ab 8.1](https://img.shields.io/badge/IP--Symcon-ab_8.1-0b6fb3.svg)](https://www.symcon.de)
 [![Optimiert für Symcon 9.0](https://img.shields.io/badge/optimiert_f%C3%BCr-Symcon_9.0-0b6fb3.svg)](https://www.symcon.de/de/service/dokumentation/installation/migrationen/v81-v90-q1-2026/)
-[![Modul-Version 1.1 (Build 7)](https://img.shields.io/badge/Modul--Version-1.1_(Build_7)-informational.svg)](library.json)
+[![Modul-Version 1.2 (Build 8)](https://img.shields.io/badge/Modul--Version-1.2_(Build_8)-informational.svg)](library.json)
 [![Tests](https://github.com/cfaf2002/Wetter_Symcon/actions/workflows/tests.yml/badge.svg)](https://github.com/cfaf2002/Wetter_Symcon/actions/workflows/tests.yml)
 [![PHP 8.3 und 8.5](https://img.shields.io/badge/PHP-8.3_%7C_8.5-777bb4.svg?logo=php&logoColor=white)](https://www.php.net)
 [![SDK: IPSModuleStrict](https://img.shields.io/badge/SDK-IPSModuleStrict-success.svg)](https://www.symcon.de/de/service/dokumentation/entwicklerbereich/sdk-tools/sdk-php/module/)
@@ -93,6 +93,8 @@ Ein Ausfall des Abrufs wird zweimal still überbrückt; erst ab dem dritten Fehl
 
 **Farbschema der Kachel:** *Symcon-Design* (Farben der Visualisierung, kein eigener Hintergrund), *Dunkel*, *Hell* und *Wetter* – eine Himmels-Szene passend zu Wetterlage und Tageszeit (Sonnenschein, ziehende Wolken, Regen, Schnee, Nebel, Gewitterblitze, Sterne), darauf immer helle Schrift. Im *Symcon-Design* hat die Kachel bewusst keinen eigenen Hintergrund – dort ist die Kachelfarbe der Visualisierung zu sehen.
 
+Große Kacheln zeigen zusätzlich eine **Temperaturkurve** über der Stundenleiste und einen **Sonnenbogen** mit dem aktuellen Stand der Sonne (nachts des Mondes) und der verbleibenden Tageslichtdauer bzw. der Zeit bis Sonnenaufgang. Bei Temperaturänderungen zählt die Anzeige kurz hoch, bei böigem Wind pendelt der Windpfeil, im großen Symbol ziehen die Wolken, fallen Regen und Schnee und blitzt es bei Gewitter.
+
 Jede Warnung trägt ein farbiges Schild mit der DWD-Warnstufe (z. B. „Stufe 3 · Unwetterwarnung“); ohne Warnung steht „Stufe 0 · Keine Wetterwarnungen“. Warnungen lassen sich mit „Details“ aufklappen (Beschreibung und Handlungsempfehlung des DWD). Die Schaltfläche unten rechts fragt sofort neu ab (höchstens alle 30 Sekunden). Die Wettersymbole sind eigene SVG-Grafiken – wahlweise **plastisch** (Standard: glänzende Sonne, Haufenwolken mit Schatten, Regentropfen, bei Schauern Sonne hinter der Regenwolke) oder **flach**; Sonne und Regen bewegen sich leicht, ruhen aber, wenn die Kachel nicht sichtbar ist oder das System „Bewegung reduzieren“ verlangt.
 
 ## 6. Variablen und Darstellungen
@@ -163,6 +165,7 @@ Die Kachel nennt beide Quellen in der Fußzeile.
 
 | Version | Build | Datum | Beschreibung |
 | :-- | --: | :-- | :-- |
+| 1.2 | 8 | 06.10.2026 | Lebendigere Kachel: Temperaturkurve, Sonnenbogen, ziehende Wolken, fallender Schnee, Blitze, pendelnder Windpfeil bei Böen, hochzählende Temperatur; große Kacheln nutzen den Platz besser |
 | 1.1 | 7 | 06.10.2026 | Kachel: Warnstufe als farbiges Schild an jeder Warnung, „Stufe 0“ ohne Warnung |
 | 1.1 | 6 | 06.10.2026 | Plastische Wettersymbole (neu Standard), flache Symbole wählbar unter „Wettersymbole“ |
 | 1.1 | 5 | 06.10.2026 | Ortssuche nach Name oder Postleitzahl im Formular; Tests ohne Netzwerkzugriff und mit echter Bright-Sky-Antwort (behebt Fehlschlag unter PHP 8.5 auf GitHub) |

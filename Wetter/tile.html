@@ -107,7 +107,19 @@
     .arrow { transition: transform .4s; }
 
     /* ---------- Warnungen ---------- */
-    .warns { grid-area: warn; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+    .mid { grid-area: warn; display: flex; flex-direction: column; gap: 8px; min-width: 0; min-height: 0; }
+    .warns { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+
+    /* Sonnenbogen: Stand der Sonne zwischen Auf- und Untergang (nachts der Mond) */
+    .sunarc { display: none; position: relative; height: 74px; flex: none; }
+    .sunarc svg { width: 100%; height: 100%; overflow: visible; }
+    .sunarc .track { fill: none; stroke: var(--line); stroke-width: 2; stroke-dasharray: 3 5; stroke-linecap: round; }
+    .sunarc .done { fill: none; stroke: var(--wx-sun); stroke-width: 2.5; stroke-linecap: round; opacity: .9; }
+    .sunarc.night .done { stroke: var(--wx-moon); opacity: .6; }
+    .sunarc .horizon { stroke: var(--line); stroke-width: 1; }
+    .sunarc .lbl { font-size: 11px; fill: var(--muted); font-variant-numeric: tabular-nums; }
+    .sunarc .mid-lbl { font-size: 11.5px; fill: var(--fg); font-weight: 600; }
+    .sunarc .orb { transition: transform 1s ease; }
     .warn {
         --lvl: var(--lvl1);
         border-radius: var(--radius);
@@ -156,6 +168,13 @@
     .hour .h { font-size: 11.5px; color: var(--muted); }
     .hour .wx { width: 28px; height: 28px; }
     .hour .v { font-size: 14px; font-weight: 600; }
+    .hour .cv { height: 26px; display: none; }
+    .hours { position: relative; }
+    .hours > svg.curve { position: absolute; left: 0; pointer-events: none; overflow: visible; display: none; }
+    .curve .line { fill: none; stroke: url(#g-curve); stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+    .curve .area { fill: url(#g-curvefill); }
+    .curve circle { fill: var(--fg); }
+    #tile.big .hour .cv, #tile.big .hours > svg.curve { display: block; }
     .hour .r { font-size: 10.5px; color: var(--wx-rain); min-height: 13px; font-weight: 600; }
 
     /* ---------- Tage ---------- */
@@ -207,6 +226,8 @@
     @container tile (max-height: 480px) and (min-width: 640px) { #daily { display: flex; } }
     /* wenig Höhe: Kurzwerte weglassen, damit Warnung und Stunden ganz sichtbar bleiben */
     @container tile (max-height: 420px) { .chips { display: none; } }
+    #tile.showsun .sunarc { display: block; }
+    #tile.showsun.nosun .sunarc { display: none; }
     @container tile (max-width: 230px) {
         .side .name, .hilo, .station { display: none; }
         .hero { flex-wrap: wrap; }
@@ -220,7 +241,7 @@
             grid-template-areas: "hero daily" "chips daily" "warn daily" "hourly hourly" "foot foot";
             column-gap: clamp(16px, 4cqw, 28px);
         }
-        .warns { overflow-y: auto; align-content: start; }
+        .mid { overflow-y: auto; }
     }
     @container tile (min-width: 640px) and (max-height: 215px) {
         #wrap { grid-template-areas: "hero warn" "chips daily" "warn daily" "hourly hourly" "foot foot"; }
@@ -331,11 +352,19 @@
     .hero .drops { animation: fall 1.1s linear infinite; }
     .hero .flakes { animation: drift 3s ease-in-out infinite alternate; }
     .hero .cloudmove { animation: drift 6s ease-in-out infinite alternate; }
+    .hero .flash { animation: bolt 4s linear infinite; }
+    .hero .snowfall { animation: snowfall 2.4s linear infinite; }
+    .arrow.gusty { animation: wobble 1.6s ease-in-out infinite alternate; }
+    .temp.tick { animation: tick .9s ease; }
     html.paused * { animation-play-state: paused !important; }
     @keyframes spin { to { transform: rotate(360deg); } }
     @keyframes pulse { from { transform: scale(.92); opacity: .8; } to { transform: scale(1.06); opacity: 1; } }
     @keyframes fall { from { transform: translateY(-3px); opacity: .5; } 60% { opacity: 1; } to { transform: translateY(4px); opacity: .2; } }
     @keyframes drift { from { transform: translateX(-1.5px); } to { transform: translateX(1.5px); } }
+    @keyframes bolt { 0%, 70%, 74%, 78%, 100% { opacity: 1; } 72%, 76% { opacity: .15; } }
+    @keyframes snowfall { from { transform: translateY(-3px); opacity: .4; } 50% { opacity: 1; } to { transform: translateY(4px); opacity: .3; } }
+    @keyframes wobble { from { transform: rotate(calc(var(--a) - 8deg)); } to { transform: rotate(calc(var(--a) + 8deg)); } }
+    @keyframes tick { 0% { transform: translateY(0); } 30% { transform: translateY(-3px); } 100% { transform: translateY(0); } }
 </style>
 
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
@@ -429,6 +458,12 @@
         <linearGradient id="g-bolt" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0" stop-color="#fff59a"/><stop offset="1" stop-color="#f5a800"/>
         </linearGradient>
+        <linearGradient id="g-curve" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#f2a53a"/><stop offset="1" stop-color="#5b9cf0"/>
+        </linearGradient>
+        <linearGradient id="g-curvefill" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#f2a53a" stop-opacity=".22"/><stop offset="1" stop-color="#5b9cf0" stop-opacity="0"/>
+        </linearGradient>
         <filter id="f-soft" x="-20%" y="-20%" width="140%" height="160%">
             <feGaussianBlur stdDeviation="1.4"/>
         </filter>
@@ -449,9 +484,11 @@
             <path d="M40 6a15 15 0 1 0 11.5 23A12 12 0 0 1 40 6z" fill="url(#g-moon)"/>
         </symbol>
         <symbol id="p-cloud" viewBox="0 0 64 64">
+            <g class="cloudmove">
             <path d="M14 50a9 9 0 0 1 0-18 12 12 0 0 1 21-8 10 10 0 0 1 17 6 9.5 9.5 0 0 1 2 20z" fill="#1a2633" opacity=".28" filter="url(#f-soft)" transform="translate(1.5 2.5)"/>
             <path d="M14 50a9 9 0 0 1 0-18 12 12 0 0 1 21-8 10 10 0 0 1 17 6 9.5 9.5 0 0 1 2 20z" fill="url(#g-cloud)" stroke="#4f6378" stroke-opacity=".35" stroke-width=".8"/>
             <ellipse cx="30" cy="31" rx="8" ry="3.5" fill="#fff" opacity=".7"/>
+        </g>
         </symbol>
         <symbol id="p-cloudback" viewBox="0 0 64 64">
             <g transform="translate(14 -10) scale(.78)">
@@ -459,19 +496,25 @@
             </g>
         </symbol>
         <symbol id="p-cloudhi" viewBox="0 0 64 64">
+            <g class="cloudmove">
             <path d="M14 42a9 9 0 0 1 0-18 12 12 0 0 1 21-8 10 10 0 0 1 17 6 9.5 9.5 0 0 1 2 20z" fill="#1a2633" opacity=".28" filter="url(#f-soft)" transform="translate(1.5 2.5)"/>
             <path d="M14 42a9 9 0 0 1 0-18 12 12 0 0 1 21-8 10 10 0 0 1 17 6 9.5 9.5 0 0 1 2 20z" fill="url(#g-cloud)" stroke="#4f6378" stroke-opacity=".35" stroke-width=".8"/>
             <ellipse cx="30" cy="23" rx="8" ry="3.5" fill="#fff" opacity=".7"/>
+        </g>
         </symbol>
         <symbol id="p-cloudrain" viewBox="0 0 64 64">
+            <g class="cloudmove">
             <path d="M14 42a9 9 0 0 1 0-18 12 12 0 0 1 21-8 10 10 0 0 1 17 6 9.5 9.5 0 0 1 2 20z" fill="#1a2633" opacity=".3" filter="url(#f-soft)" transform="translate(1.5 2.5)"/>
             <path d="M14 42a9 9 0 0 1 0-18 12 12 0 0 1 21-8 10 10 0 0 1 17 6 9.5 9.5 0 0 1 2 20z" fill="url(#g-cloudgrey)" stroke="#4f6378" stroke-opacity=".35" stroke-width=".8"/>
             <ellipse cx="30" cy="23" rx="8" ry="3.5" fill="#fff" opacity=".55"/>
+        </g>
         </symbol>
         <symbol id="p-clouddark" viewBox="0 0 64 64">
+            <g class="cloudmove">
             <path d="M14 42a9 9 0 0 1 0-18 12 12 0 0 1 21-8 10 10 0 0 1 17 6 9.5 9.5 0 0 1 2 20z" fill="#0d141c" opacity=".35" filter="url(#f-soft)" transform="translate(1.5 2.5)"/>
             <path d="M14 42a9 9 0 0 1 0-18 12 12 0 0 1 21-8 10 10 0 0 1 17 6 9.5 9.5 0 0 1 2 20z" fill="url(#g-clouddark)" stroke="#4f6378" stroke-opacity=".35" stroke-width=".8"/>
             <ellipse cx="30" cy="23" rx="8" ry="3.5" fill="#fff" opacity=".3"/>
+        </g>
         </symbol>
         <symbol id="p-rain" viewBox="0 0 64 64">
             <g class="drops" fill="url(#g-drop)">
@@ -486,7 +529,7 @@
             </g>
         </symbol>
         <symbol id="p-snow" viewBox="0 0 64 64">
-            <g class="flakes" stroke="#f4f9ff" stroke-width="2.2" stroke-linecap="round" fill="none">
+            <g class="flakes snowfall" stroke="#f4f9ff" stroke-width="2.2" stroke-linecap="round" fill="none">
                 <path transform="translate(22 51)" d="m0-4.2v8.4m-3.64-6.3 7.28 4.2m-7.28 0 7.28-4.2"/><path transform="translate(33 56)" d="m0-4.2v8.4m-3.64-6.3 7.28 4.2m-7.28 0 7.28-4.2"/><path transform="translate(44 51)" d="m0-4.2v8.4m-3.64-6.3 7.28 4.2m-7.28 0 7.28-4.2"/>
             </g>
             <g stroke="#5f8fbd" stroke-width=".9" stroke-linecap="round" fill="none">
@@ -499,7 +542,7 @@
             </g>
         </symbol>
         <symbol id="p-bolt" viewBox="0 0 64 64">
-            <path d="M34 39l-9 13h7l-3 11 12-15h-7l4-9z" fill="url(#g-bolt)" stroke="#c77700" stroke-width=".8" stroke-linejoin="round"/>
+            <path d="M34 39l-9 13h7l-3 11 12-15h-7l4-9z" class="flash" fill="url(#g-bolt)" stroke="#c77700" stroke-width=".8" stroke-linejoin="round"/>
         </symbol>
     </defs>
 </svg>
@@ -518,7 +561,10 @@
             </div>
         </div>
         <div class="chips" id="chips"></div>
-        <div class="warns" id="warns" aria-live="polite"></div>
+        <div class="mid">
+            <div class="warns" id="warns" aria-live="polite"></div>
+            <div class="sunarc" id="sunarc" aria-hidden="true"></div>
+        </div>
         <section class="sec" id="hourly">
             <h3 id="hourlyTitle"></h3>
             <div class="hours" id="hours"></div>
@@ -638,6 +684,7 @@
                 var s = small(iconId);
                 if (rotate !== undefined) {
                     s.classList.add('arrow');
+                    s.style.setProperty('--a', rotate + 'deg');
                     s.style.transform = 'rotate(' + rotate + 'deg)';
                 }
                 c.appendChild(s);
@@ -648,6 +695,130 @@
         }
 
         function clear(node) { while (node.firstChild) { node.removeChild(node.firstChild); } }
+
+        // Temperatur: bei Änderung kurz hochzählen
+        var shownTemp = null;
+        function setTemp(v) {
+            var box = $('temp');
+            box.textContent = nf0.format(v);
+            var sup = document.createElement('sup');
+            sup.textContent = '°C';
+            box.appendChild(sup);
+        }
+        function showTemp(target) {
+            var from = shownTemp;
+            shownTemp = target;
+            var calm = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+            if (from === null || from === target || calm || document.hidden) { setTemp(target); return; }
+            var start = null, box = $('temp');
+            box.classList.remove('tick'); void box.offsetWidth; box.classList.add('tick');
+            function step(ts) {
+                if (start === null) { start = ts; }
+                var k = Math.min(1, (ts - start) / 800);
+                setTemp(Math.round(from + (target - from) * (1 - Math.pow(1 - k, 3))));
+                if (k < 1 && shownTemp === target) { requestAnimationFrame(step); }
+            }
+            requestAnimationFrame(step);
+        }
+
+        // Sonnenbogen
+        var sunData = null, sunText = { dayLeft: '', riseIn: '' };
+        function fmtDur(sec) {
+            var h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60);
+            return (h > 0 ? h + ' h ' : '') + m + ' min';
+        }
+        function renderSun() {
+            var box = $('sunarc');
+            clear(box);
+            if (!sunData || !sunData[0] || !sunData[1]) { return; }
+            var now = Date.now() / 1000, rise = sunData[0], set = sunData[1], next = sunData[2] || rise + 86400;
+            var night = now < rise || now > set, f, text;
+            if (!night) {
+                f = (now - rise) / (set - rise);
+                text = sunText.dayLeft.replace('%s', fmtDur(set - now));
+            } else {
+                var a = now > set ? set : set - 86400, b = now > set ? next : rise;
+                f = (now - a) / (b - a);
+                text = sunText.riseIn.replace('%s', fmtDur(b - now));
+            }
+            f = Math.max(0, Math.min(1, f));
+            box.classList.toggle('night', night);
+            var W = Math.max(160, box.clientWidth || 300), H = 74, x0 = 18, x1 = W - 18, base = 52, top = 10;
+            var svg = document.createElementNS(SVG, 'svg');
+            svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
+            var cx = (x0 + x1) / 2, rx = (x1 - x0) / 2, ry = base - top;
+            function pt(k) { var a = Math.PI * (1 - k); return [cx + rx * Math.cos(a), base - ry * Math.sin(a)]; }
+            function arcPath(k) {
+                var d = 'M' + x0 + ' ' + base;
+                for (var i = 1; i <= 40; i++) { var q = pt(k * i / 40); d += ' L' + q[0].toFixed(1) + ' ' + q[1].toFixed(1); }
+                return d;
+            }
+            function mk(tag, attrs, cls) {
+                var e = document.createElementNS(SVG, tag);
+                for (var k in attrs) { e.setAttribute(k, attrs[k]); }
+                if (cls) { e.setAttribute('class', cls); }
+                svg.appendChild(e);
+                return e;
+            }
+            mk('line', { x1: 4, y1: base, x2: W - 4, y2: base }, 'horizon');
+            mk('path', { d: arcPath(1) }, 'track');
+            mk('path', { d: arcPath(f) }, 'done');
+            var p = pt(f);
+            var orb = mk('g', { transform: 'translate(' + p[0].toFixed(1) + ' ' + p[1].toFixed(1) + ')' }, 'orb');
+            var u = document.createElementNS(SVG, 'use');
+            u.setAttribute('href', night ? '#p-moon' : '#p-sun');
+            u.setAttribute('x', -13); u.setAttribute('y', -13); u.setAttribute('width', 26); u.setAttribute('height', 26);
+            orb.appendChild(u);
+            var t1 = mk('text', { x: x0 - 6, y: H - 4 }, 'lbl'); t1.textContent = '↑ ' + (sunData.riseText || '');
+            var t2 = mk('text', { x: x1 + 6, y: H - 4, 'text-anchor': 'end' }, 'lbl'); t2.textContent = '↓ ' + (sunData.setText || '');
+            var t3 = mk('text', { x: cx, y: H - 4, 'text-anchor': 'middle' }, 'mid-lbl'); t3.textContent = text;
+            box.appendChild(svg);
+        }
+        setInterval(function () { if (!document.hidden) { renderSun(); } }, 60000);
+
+        // Sonnenbogen nur zeigen, wenn er ohne Abschneiden in die Spalte passt
+        function fitSun() {
+            var mid = document.querySelector('.mid');
+            tile.classList.remove('nosun');
+            if (tile.classList.contains('showsun') && mid.scrollHeight > mid.clientHeight + 1) {
+                tile.classList.add('nosun');
+            }
+        }
+
+        // Temperaturkurve über der Stundenleiste (nur große Kacheln)
+        function drawCurve(box, hours) {
+            var spacer = box.querySelector('.cv');
+            if (!spacer || hours.length < 2) { return; }
+            var temps = hours.map(function (h) { return h[3]; });
+            var lo = Math.min.apply(null, temps), hi = Math.max.apply(null, temps), span = Math.max(1, hi - lo);
+            var step = 50, half = 24, top = spacer.offsetTop, h = 26;
+            var pts = temps.map(function (v, i) { return [half + i * step, 3 + (1 - (v - lo) / span) * (h - 6)]; });
+            var d = 'M' + pts[0][0] + ' ' + pts[0][1];
+            for (var i = 1; i < pts.length; i++) {
+                var p0 = pts[i - 2] || pts[i - 1], p1 = pts[i - 1], p2 = pts[i], p3 = pts[i + 1] || p2;
+                d += ' C' + (p1[0] + (p2[0] - p0[0]) / 6).toFixed(1) + ' ' + (p1[1] + (p2[1] - p0[1]) / 6).toFixed(1) + ' ' +
+                    (p2[0] - (p3[0] - p1[0]) / 6).toFixed(1) + ' ' + (p2[1] - (p3[1] - p1[1]) / 6).toFixed(1) + ' ' + p2[0] + ' ' + p2[1].toFixed(1);
+            }
+            var w = half * 2 + (pts.length - 1) * step;
+            var svg = document.createElementNS(SVG, 'svg');
+            svg.setAttribute('class', 'curve');
+            svg.setAttribute('width', w); svg.setAttribute('height', h);
+            svg.style.top = top + 'px';
+            var area = document.createElementNS(SVG, 'path');
+            area.setAttribute('class', 'area');
+            area.setAttribute('d', d + ' L' + pts[pts.length - 1][0] + ' ' + h + ' L' + pts[0][0] + ' ' + h + 'Z');
+            svg.appendChild(area);
+            var line = document.createElementNS(SVG, 'path');
+            line.setAttribute('class', 'line');
+            line.setAttribute('d', d);
+            svg.appendChild(line);
+            pts.forEach(function (q) {
+                var c = document.createElementNS(SVG, 'circle');
+                c.setAttribute('cx', q[0]); c.setAttribute('cy', q[1].toFixed(1)); c.setAttribute('r', 2.2);
+                svg.appendChild(c);
+            });
+            box.insertBefore(svg, box.firstChild);
+        }
 
         function renderWarnings(d, t) {
             var box = $('warns');
@@ -717,11 +888,15 @@
                 var c = el('div', 'hour');
                 c.appendChild(el('div', 'h', h[0]));
                 c.appendChild(icon(h[1], h[2]));
+                c.appendChild(el('div', 'cv'));
                 c.appendChild(el('div', 'v', deg(h[3])));
                 c.appendChild(el('div', 'r', h[4] >= 20 ? h[4] + ' %' : ''));
                 box.appendChild(c);
             });
+            lastHours = d.hours;
+            if (tile.classList.contains('big')) { drawCurve(box, d.hours); }
         }
+        var lastHours = null;
 
         function renderDays(d, t) {
             var sec = $('daily');
@@ -785,10 +960,7 @@
             $('sky').setAttribute('data-s', g + '-' + (n.day ? 1 : 0));
             var hero = icon(n.code, n.day, $('heroIcon'), true);
             hero.setAttribute('aria-label', n.cond || '');
-            $('temp').textContent = nf0.format(Math.round(n.temp));
-            var sup = document.createElement('sup');
-            sup.textContent = '°C';
-            $('temp').appendChild(sup);
+            showTemp(Math.round(n.temp));
             $('name').textContent = d.name || '';
             $('cond').textContent = n.cond || '';
             $('station').textContent = d.station || '';
@@ -808,7 +980,12 @@
             if (d.show && d.show.details) {
                 chips.appendChild(chip(t.feels, ' ' + deg(n.feels)));
                 // Pfeil zeigt, wohin der Wind weht (Windrichtung = woher)
-                chips.appendChild(chip(t.wind, ' ' + nf0.format(n.wind) + ' ' + d.unit + ' ' + n.dir, 's-arrow', (n.deg + 180) % 360));
+                var windChip = chip(t.wind, ' ' + nf0.format(n.wind) + ' ' + d.unit + ' ' + n.dir, 's-arrow', (n.deg + 180) % 360);
+                // bei böigem Wind pendelt der Pfeil
+                if (n.gust > n.wind * 1.4 && n.gust >= (d.unit === 'km/h' ? 20 : (d.unit === 'm/s' ? 5.5 : 11))) {
+                    windChip.querySelector('.arrow').classList.add('gusty');
+                }
+                chips.appendChild(windChip);
                 if (n.gust > n.wind * 1.3 && n.gust > 0) { chips.appendChild(chip(t.gusts, ' ' + nf0.format(n.gust))); }
                 chips.appendChild(chip(t.humidity, ' ' + nf0.format(n.hum) + ' %'));
                 if (n.precip > 0) { chips.appendChild(chip(t.precip, ' ' + nf1.format(n.precip) + ' mm')); }
@@ -819,7 +996,13 @@
                 }
             }
 
+            sunText = { dayLeft: t.dayLeft || '%s', riseIn: t.riseIn || '%s' };
+            sunData = d.today && d.today.sun ? d.today.sun.slice() : null;
+            if (sunData) { sunData.riseText = d.today.rise; sunData.setText = d.today.set; }
+            renderSun();
+
             renderWarnings(d, t);
+            fitSun();
             renderHours(d, t);
             renderDays(d, t);
 
@@ -841,8 +1024,21 @@
         // Große Kacheln (z. B. Vollbild) gleichmäßig vergrößern statt Leerraum zu lassen
         function updateScale() {
             var w = tile.clientWidth, h = tile.clientHeight;
-            var scale = Math.max(1, Math.min(2.2, Math.min(w / 760, h / 540)));
+            var scale = Math.max(1, Math.min(2.2, Math.min(w / 900, h / 640)));
             var wrap = $('wrap');
+            // Platz nach der Vergrößerung entscheidet über Kurve und Sonnenbogen
+            var ew = w / (scale > 1.05 ? scale : 1), eh = h / (scale > 1.05 ? scale : 1);
+            var big = (eh >= 560) || (ew >= 640 && eh >= 500);
+            tile.classList.toggle('showsun', (eh >= 520) || (ew >= 640 && eh >= 480));
+            fitSun();
+            renderSun();
+            if (big !== tile.classList.contains('big')) {
+                tile.classList.toggle('big', big);
+                // Kurve neu zeichnen bzw. entfernen
+                var hb = $('hours'), old = hb.querySelector('svg.curve');
+                if (old) { hb.removeChild(old); }
+                if (big && lastHours) { drawCurve(hb, lastHours); }
+            }
             wrap.style.zoom = scale > 1.05 ? String(scale) : '';
             wrap.style.height = scale > 1.05 ? (h / scale) + 'px' : '';
         }

@@ -559,6 +559,8 @@ class Wetter extends IPSModuleStrict
                 'prob' => $values['TodayPrecipProbability'],
                 'rise' => $values['Sunrise'] > 0 ? gmdate('H:i', $values['Sunrise'] + $offset) : '',
                 'set'  => $values['Sunset'] > 0 ? gmdate('H:i', $values['Sunset'] + $offset) : '',
+                // für den Sonnenbogen: Aufgang und Untergang heute, Aufgang morgen (Unix-Zeit)
+                'sun'  => [$values['Sunrise'], $values['Sunset'], (int) ($days[1]['sunrise'] ?? 0)],
             ],
             'unit'  => $unit,
             'hours' => $hourRows,
@@ -591,6 +593,8 @@ class Wetter extends IPSModuleStrict
                 'refresh'   => $this->Translate('Update now'),
                 'source'    => $station !== null || (!$warnings['outside'] && $this->WarningsWanted()) ? 'Open-Meteo · DWD' : 'Open-Meteo',
                 'level'     => $this->Translate('Level'),
+                'dayLeft'   => $this->Translate('Daylight left: %s'),
+                'riseIn'    => $this->Translate('Sunrise in %s'),
                 'levels'    => ['', $this->Translate('Weather warning'), $this->Translate('Warning of markedly severe weather'), $this->Translate('Severe weather warning'), $this->Translate('Warning of extreme weather')],
             ],
         ];
