@@ -359,7 +359,7 @@
 
     /* ziehende Wolken, Sonne/Mond und Blitz (werden je nach Wetterlage erzeugt) */
     #sky > .fly, #sky > .orbit, #sky > .strike { opacity: 1; }
-    #sky .fly svg { position: absolute; left: 0; top: 0; overflow: visible; animation: fly var(--d) linear infinite; animation-delay: var(--dl); will-change: transform; }
+    #sky .fly > * { position: absolute; left: 0; top: 0; overflow: visible; animation: fly var(--d) linear infinite; animation-delay: var(--dl); will-change: transform; }
     #sky .orbit svg { position: absolute; overflow: visible; }
     #sky .orbit .sunrays { transform-box: fill-box; transform-origin: center; animation: spin 90s linear infinite; }
     #sky .strike svg { position: absolute; opacity: 0; animation: strike 9s linear infinite; animation-delay: var(--dl, 0s); filter: drop-shadow(0 0 6px rgba(255, 245, 190, .9)); }
@@ -734,34 +734,79 @@
             svg.appendChild(u);
             return svg;
         }
+        // Natürliche Wolke auf einem Canvas: viele weiche Dunstballen, oben hell, unten schattig
+        function makeCloud(w, kind, seed) {
+            var flat = kind === 'flat' || kind === 'grey' || kind === 'rain' || kind === 'storm';
+            var h = Math.round(w * (kind === 'flat' ? .32 : (flat ? .42 : .55)));
+            var dpr = Math.min(2, window.devicePixelRatio || 1);
+            var cv = document.createElement('canvas');
+            cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr);
+            cv.style.width = w + 'px'; cv.style.height = h + 'px';
+            var ctx = cv.getContext('2d');
+            if (!ctx) { return cv; }
+            ctx.scale(dpr, dpr);
+            var rnd = function () { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; };
+            seed = (seed % 2147483646) + 1;
+            var base = h * (flat ? .8 : .78);
+            var col = { fair: [255, 255, 255], grey: [232, 236, 241], flat: [236, 240, 244], rain: [205, 212, 222], storm: [160, 166, 182] }[kind];
+            var n = Math.round(w / (flat ? 3.2 : 4.2));
+            for (var i = 0; i < n; i++) {
+                var x = w * (.1 + .8 * rnd());
+                var k = (x / w - .5) * 2;
+                // Kuppelform: in der Mitte hoch, an den Rändern flach
+                var dome = Math.pow(Math.max(0, 1 - k * k), flat ? 1.4 : .75);
+                var top = h * (flat ? .45 : .66) * dome;
+                var y = base - rnd() * top * .85;
+                var r = (h * (flat ? .1 : .12) + rnd() * h * (flat ? .14 : .2)) * (.55 + dome * .6);
+                var lift = 1 - (base - y) / (h * .9);
+                var shade = .82 + .18 * (1 - lift);
+                var gr = ctx.createRadialGradient(x - r * .25, y - r * .3, r * .1, x, y, r);
+                var c0 = 'rgba(' + Math.round(col[0] * shade) + ',' + Math.round(col[1] * shade) + ',' + Math.round(col[2] * shade);
+                gr.addColorStop(0, c0 + ',' + (.38 + rnd() * .2).toFixed(2) + ')');
+                gr.addColorStop(.55, c0 + ',.16)');
+                gr.addColorStop(1, c0 + ',0)');
+                ctx.fillStyle = gr;
+                ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+            }
+            // Schatten an der Unterseite und Licht von oben
+            ctx.globalCompositeOperation = 'source-atop';
+            var sh = ctx.createLinearGradient(0, base - h * .5, 0, base + h * .15);
+            var dark = kind === 'storm' ? '40,44,60' : (kind === 'rain' ? '70,80,98' : '96,110,130');
+            sh.addColorStop(0, 'rgba(255,255,255,.25)');
+            sh.addColorStop(.45, 'rgba(' + dark + ',0)');
+            sh.addColorStop(1, 'rgba(' + dark + ',' + (kind === 'fair' ? .35 : .55) + ')');
+            ctx.fillStyle = sh;
+            ctx.fillRect(0, 0, w, h);
+            return cv;
+        }
+
         function buildScene(g, day, code) {
             var key = g + day + (code >= 80 ? 's' : '');
             if (key === sceneKey) { return; }
             sceneKey = key;
             var fly = $('skyFly'), orb = $('skyOrb'), strike = $('skyStrike');
             clear(fly); clear(orb); clear(strike);
-            // Anzahl, Art und Tempo der Wolken je Wetterlage
+            // Anzahl, Art und Größe der Wolken je Wetterlage (natürliche Wolken aus vielen weichen Ballen)
             var cfg = {
-                clear:   { n: day ? 1 : 0, id: 'p-cloud', op: .55, size: [70, 110] },
-                partly:  { n: 4, id: 'p-cloud', op: .9, size: [90, 170] },
-                cloudy:  { n: 7, id: 'p-cloudrain', op: .9, size: [130, 240] },
-                fog:     { n: 5, id: 'p-cloudrain', op: .5, size: [160, 260] },
-                drizzle: { n: 6, id: 'p-cloudrain', op: .85, size: [130, 220] },
-                rain:    { n: 7, id: 'p-cloudrain', op: .9, size: [140, 240] },
-                snow:    { n: 6, id: 'p-cloudrain', op: .8, size: [130, 220] },
-                thunder: { n: 7, id: 'p-clouddark', op: .95, size: [150, 260] }
-            }[g] || { n: 3, id: 'p-cloud', op: .8, size: [100, 180] };
-            if (!day && cfg.id === 'p-cloud') { cfg.op *= .45; }
+                clear:   { n: day ? 2 : 0, kind: 'fair', op: .6, w: [110, 170] },
+                partly:  { n: 4, kind: 'fair', op: .85, w: [150, 260] },
+                cloudy:  { n: 6, kind: 'grey', op: .95, w: [260, 420] },
+                fog:     { n: 5, kind: 'flat', op: .6, w: [300, 460] },
+                drizzle: { n: 6, kind: 'grey', op: .95, w: [240, 400] },
+                rain:    { n: 7, kind: 'rain', op: .95, w: [260, 420] },
+                snow:    { n: 6, kind: 'grey', op: .9, w: [240, 380] },
+                thunder: { n: 6, kind: 'storm', op: 1, w: [300, 460] }
+            }[g] || { n: 3, kind: 'fair', op: .9, w: [160, 260] };
             for (var i = 0; i < cfg.n; i++) {
-                var w = cfg.size[0] + Math.random() * (cfg.size[1] - cfg.size[0]);
-                var c = skySvg(cfg.id, Math.round(w), Math.round(w * .62));
-                var dur = 70 + Math.random() * 70 - (g === 'thunder' || g === 'rain' ? 25 : 0);
+                var w = cfg.w[0] + Math.random() * (cfg.w[1] - cfg.w[0]);
+                var c = makeCloud(Math.round(w), cfg.kind, Math.floor(Math.random() * 1e6));
+                var dur = 90 + Math.random() * 90 - (g === 'thunder' || g === 'rain' ? 30 : 0);
                 c.style.setProperty('--d', dur.toFixed(0) + 's');
                 // negativer Versatz: Wolken sind sofort verteilt, nicht erst am linken Rand
                 c.style.setProperty('--dl', (-Math.random() * dur).toFixed(1) + 's');
-                c.style.setProperty('--y', (Math.random() * 55 - 15).toFixed(0) + 'cqh');
-                c.style.opacity = (cfg.op * .75 * (.7 + Math.random() * .3)).toFixed(2);
-                if (!day) { c.style.filter = 'brightness(.55)'; }
+                c.style.setProperty('--y', (Math.random() * 50 - 18).toFixed(0) + 'cqh');
+                c.style.opacity = (cfg.op * (.75 + Math.random() * .25)).toFixed(2);
+                if (!day) { c.style.filter = 'brightness(.42) saturate(.7)'; }
                 fly.appendChild(c);
             }
             // Gewitter: zwei Blitze an zufälligen Stellen
