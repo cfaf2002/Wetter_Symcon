@@ -2,7 +2,7 @@
 
 [![IP-Symcon ab 8.1](https://img.shields.io/badge/IP--Symcon-ab_8.1-0b6fb3.svg)](https://www.symcon.de)
 [![Optimiert für Symcon 9.0](https://img.shields.io/badge/optimiert_f%C3%BCr-Symcon_9.0-0b6fb3.svg)](https://www.symcon.de/de/service/dokumentation/installation/migrationen/v81-v90-q1-2026/)
-[![Modul-Version 1.2 (Build 11)](https://img.shields.io/badge/Modul--Version-1.2_(Build_11)-informational.svg)](library.json)
+[![Modul-Version 1.3 (Build 12)](https://img.shields.io/badge/Modul--Version-1.3_(Build_12)-informational.svg)](library.json)
 [![Tests](https://github.com/cfaf2002/Wetter_Symcon/actions/workflows/tests.yml/badge.svg)](https://github.com/cfaf2002/Wetter_Symcon/actions/workflows/tests.yml)
 [![PHP 8.3 und 8.5](https://img.shields.io/badge/PHP-8.3_%7C_8.5-777bb4.svg?logo=php&logoColor=white)](https://www.php.net)
 [![SDK: IPSModuleStrict](https://img.shields.io/badge/SDK-IPSModuleStrict-success.svg)](https://www.symcon.de/de/service/dokumentation/entwicklerbereich/sdk-tools/sdk-php/module/)
@@ -44,6 +44,7 @@ Autor: Armin Frohwerk · Lizenz: MIT
 - **Vorhersage (zuschaltbar):** Höchst-/Tiefstwerte und Regenwahrscheinlichkeit für heute und morgen, Wetterlage morgen und der Schalter **„Regen in den nächsten 2 Stunden“** – praktisch für Markise, Bewässerung oder Fenster-Hinweise
 - **Messwerte der nächsten DWD-Station (zuschaltbar):** Temperatur, Luftfeuchte, Taupunkt, Luftdruck, Wind, Böen, Niederschlag, Bewölkung und Sichtweite gemessen statt berechnet; Station und Entfernung in Variable und Kachel
 - **Unwetterwarnungen des DWD:** höchste Warnstufe (1 gelb bis 4 violett), Anzahl und Text der aktiven Warnungen; einstellbar, ab welcher Stufe gewarnt wird
+- **14-Tage-Vorhersage:** Schaltfläche „14 Tage“ in der Kachel öffnet eine Liste mit Wetterlage, Tiefst-/Höchstwert, Regenwahrscheinlichkeit und -menge, Sonnenstunden und Wind für 14 Tage
 - **Kachel:** aktuelles Wetter, Kurzwerte, Warnungen mit aufklappbaren Details, Stundenleiste und 7-Tage-Übersicht mit Temperaturbalken; passt sich der Kachelgröße an
 - Standort aus Symcon (Kern-Instanzen → Location) oder eigener Standort auf der Karte
 - Wahl des Wettermodells (automatisch, DWD ICON, ECMWF, GFS, Météo-France, MET Norway) und der Windeinheit (km/h, m/s, Knoten)
@@ -96,7 +97,7 @@ Ein Ausfall des Abrufs wird zweimal still überbrückt; erst ab dem dritten Fehl
 
 Große Kacheln zeigen zusätzlich eine **Temperaturkurve** über der Stundenleiste und einen **Sonnenbogen** mit dem aktuellen Stand der Sonne (nachts des Mondes) und der verbleibenden Tageslichtdauer bzw. der Zeit bis Sonnenaufgang. Bei Temperaturänderungen zählt die Anzeige kurz hoch, bei böigem Wind pendelt der Windpfeil, im großen Symbol ziehen die Wolken, fallen Regen und Schnee und blitzt es bei Gewitter.
 
-Jede Warnung trägt ein farbiges Schild mit der DWD-Warnstufe (z. B. „Stufe 3 · Unwetterwarnung“); ohne Warnung steht „Stufe 0 · Keine Wetterwarnungen“. Warnungen lassen sich mit „Details“ aufklappen (Beschreibung und Handlungsempfehlung des DWD). Die Schaltfläche unten rechts fragt sofort neu ab (höchstens alle 30 Sekunden). Die Wettersymbole sind eigene SVG-Grafiken – wahlweise **plastisch** (Standard: glänzende Sonne, Haufenwolken mit Schatten, Regentropfen, bei Schauern Sonne hinter der Regenwolke) oder **flach**; Sonne und Regen bewegen sich leicht, ruhen aber, wenn die Kachel nicht sichtbar ist oder das System „Bewegung reduzieren“ verlangt.
+Jede Warnung trägt ein farbiges Schild mit der DWD-Warnstufe (z. B. „Stufe 3 · Unwetterwarnung“); ohne Warnung steht „Stufe 0 · Keine Wetterwarnungen“. Warnungen lassen sich mit „Details“ aufklappen (Beschreibung und Handlungsempfehlung des DWD). Die Schaltfläche **„14 Tage“** unten rechts öffnet die 14-Tage-Vorhersage über der Kachel (schließen mit ✕ oder Esc); sie lässt sich unter *Kachel* abschalten. Die Schaltfläche ganz rechts fragt sofort neu ab (höchstens alle 30 Sekunden). Die Wettersymbole sind eigene SVG-Grafiken – wahlweise **plastisch** (Standard: glänzende Sonne, Haufenwolken mit Schatten, Regentropfen, bei Schauern Sonne hinter der Regenwolke) oder **flach**; Sonne und Regen bewegen sich leicht, ruhen aber, wenn die Kachel nicht sichtbar ist oder das System „Bewegung reduzieren“ verlangt.
 
 ## 6. Variablen und Darstellungen
 
@@ -128,7 +129,7 @@ Variablen werden nur geschrieben, wenn sich ihr Wert ändert – Ereignisse auf 
 // Sofort abfragen (true bei Erfolg)
 WETTER_Update(int $InstanzID): bool;
 
-// Letzte Daten als JSON: current, hourly (48 h), daily (7 Tage), warnings
+// Letzte Daten als JSON: current, hourly (48 h), daily (14 Tage), warnings
 $daten = json_decode(WETTER_GetForecast(12345), true);
 echo $daten['daily'][1]['max'];          // Höchstwert morgen
 
@@ -166,6 +167,7 @@ Die Kachel nennt beide Quellen in der Fußzeile.
 
 | Version | Build | Datum | Beschreibung |
 | :-- | --: | :-- | :-- |
+| 1.3 | 12 | 06.10.2026 | Neu: 14-Tage-Vorhersage über die Schaltfläche „14 Tage“ in der Kachel; GetForecast liefert 14 Tage |
 | 1.2 | 11 | 06.10.2026 | Farbschema „Wetter“: natürliche Wolken (weiche Dunstballen mit Schatten) statt Symbol-Wolken |
 | 1.2 | 10 | 06.10.2026 | Farbschema „Wetter“: echte ziehende Wolken je nach Wetterlage, Regenwolken, Blitze bei Gewitter |
 | 1.2 | 9 | 06.10.2026 | Flache Kacheln (z. B. Handy im Querformat): kompakte Stundenleiste ohne Abschneiden, Warnung als Stufen-Schild |

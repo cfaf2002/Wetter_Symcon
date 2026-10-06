@@ -98,6 +98,7 @@ class Wetter extends IPSModuleStrict
         $this->RegisterPropertyInteger('TileHours', 24);
         $this->RegisterPropertyBoolean('TileShowDaily', true);
         $this->RegisterPropertyInteger('TileDays', 7);
+        $this->RegisterPropertyBoolean('TileShowLong', true);
 
         $this->RegisterAttributeString('TileData', '{}');
         $this->RegisterAttributeInteger('FailCount', 0);
@@ -565,6 +566,7 @@ class Wetter extends IPSModuleStrict
             'unit'  => $unit,
             'hours' => $hourRows,
             'days'  => $dayRows,
+            'long'  => $this->ReadPropertyBoolean('TileShowLong') ? $this->LongRows($days, $weekdays) : [],
             'warn'  => array_map(static function (array $w): array {
                 return [$w['level'], $w['headline'], $w['period'], $w['description'], $w['instruction']];
             }, $warnings['list']),
@@ -591,6 +593,9 @@ class Wetter extends IPSModuleStrict
                 'more'      => $this->Translate('Details'),
                 'less'      => $this->Translate('Less'),
                 'refresh'   => $this->Translate('Update now'),
+                'longBtn'   => $this->Translate('14 days'),
+                'longTitle' => $this->Translate('14-day forecast'),
+                'close'     => $this->Translate('Close'),
                 'source'    => $station !== null || (!$warnings['outside'] && $this->WarningsWanted()) ? 'Open-Meteo · DWD' : 'Open-Meteo',
                 'level'     => $this->Translate('Level'),
                 'dayLeft'   => $this->Translate('Daylight left: %s'),
@@ -598,6 +603,21 @@ class Wetter extends IPSModuleStrict
                 'levels'    => ['', $this->Translate('Weather warning'), $this->Translate('Warning of markedly severe weather'), $this->Translate('Severe weather warning'), $this->Translate('Warning of extreme weather')],
             ],
         ];
+    }
+
+    /**
+     * 14-Tage-Vorhersage für die Kachel:
+     * [Tag, Datum, Code, Wetterlage, Min, Max, Regenwahrscheinlichkeit, Niederschlag, Sonnenstunden, Wind max., Böen max.]
+     */
+    private function LongRows(array $days, array $weekdays): array
+    {
+        $rows = [];
+        foreach (array_slice($days, 0, 14) as $i => $d) {
+            $time = strtotime($d['date'] . ' 12:00 UTC');
+            $label = $i === 0 ? $this->Translate('Today') : ($i === 1 ? $this->Translate('Tomorrow') : $weekdays[(int) gmdate('w', $time)]);
+            $rows[] = [$label, gmdate('d.m.', $time), $d['code'], $this->Condition($d['code']), $d['min'], $d['max'], $d['prob'], $d['precip'], $d['sun'], $d['wind'], $d['gusts']];
+        }
+        return $rows;
     }
 
     private function HandleFailure(string $message): void
@@ -629,7 +649,7 @@ class Wetter extends IPSModuleStrict
             'daily'           => 'weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max,sunrise,sunset,sunshine_duration,uv_index_max,wind_speed_10m_max,wind_gusts_10m_max',
             'timezone'        => 'auto',
             'timeformat'      => 'unixtime',
-            'forecast_days'   => 7,
+            'forecast_days'   => 14,
             'forecast_hours'  => 48,
             'wind_speed_unit' => $this->WindUnit(),
         ];

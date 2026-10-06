@@ -202,6 +202,57 @@
         background: transparent; color: var(--muted); cursor: pointer; display: grid; place-items: center;
     }
     #refresh:hover { background: var(--surface); }
+    .foot .pill {
+        margin-left: auto; min-height: 36px; padding: 0 12px; border: 0; border-radius: var(--pill); cursor: pointer;
+        background: var(--surface); color: var(--fg); font-size: 12.5px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;
+    }
+    .foot .pill:hover { background: var(--surface-hover); }
+    .foot .pill svg { width: 14px; height: 14px; }
+    .foot .pill[hidden] { display: none; }
+
+    /* 14-Tage-Vorhersage über der Kachel */
+    .long {
+        position: absolute; inset: 0; z-index: 5; display: flex; flex-direction: column;
+        padding: var(--hdr) clamp(10px, 4cqmin, 16px) 10px; gap: 6px;
+        background: color-mix(in srgb, var(--popup) 94%, transparent);
+        -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+        animation: longIn .25s ease;
+    }
+    .long[hidden] { display: none; }
+    #tile.sky .long { background: rgba(16, 26, 40, .82); }
+    .long-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+    .long-head h2 { margin: 0; font-size: 15px; font-weight: 700; }
+    #longClose { width: 36px; height: 36px; border: 0; border-radius: var(--pill); background: var(--surface); cursor: pointer; display: grid; place-items: center; }
+    #longClose:hover { background: var(--surface-hover); }
+    #longClose svg { width: 15px; height: 15px; }
+    .long-list { overflow-y: auto; min-height: 0; scrollbar-width: thin; }
+    .lrow {
+        display: grid; align-items: center; column-gap: 10px; min-height: 46px; border-top: 1px solid var(--line);
+        grid-template-columns: 4.2em 32px minmax(0, 1fr) 3.4em 2.4em minmax(40px, 1.2fr) 2.4em;
+        grid-template-areas: "d i c r mn bar mx";
+        font-size: 13.5px; font-variant-numeric: tabular-nums;
+    }
+    .lrow:first-child { border-top: 0; }
+    .lrow .d { grid-area: d; line-height: 1.15; }
+    .lrow .d b { display: block; font-weight: 700; }
+    .lrow .d small { color: var(--muted); font-size: 11px; }
+    .lrow .wx { grid-area: i; width: 32px; height: 32px; }
+    .lrow .c { grid-area: c; min-width: 0; font-size: 12.5px; line-height: 1.2; }
+    .lrow .c span { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .lrow .c small { display: flex; gap: 10px; color: var(--muted); font-size: 11px; margin-top: 2px; }
+    .lrow .c small i { display: inline-flex; align-items: center; gap: 3px; font-style: normal; }
+    .lrow .c small svg { width: 11px; height: 11px; }
+    .lrow .r { grid-area: r; color: var(--wx-rain); font-size: 11.5px; font-weight: 600; text-align: right; line-height: 1.2; }
+    .lrow .r small { display: block; font-weight: 500; color: var(--muted); }
+    .lrow .mn { grid-area: mn; color: var(--muted); text-align: right; }
+    .lrow .bar { grid-area: bar; }
+    .lrow .mx { grid-area: mx; text-align: right; font-weight: 700; }
+    @container tile (max-width: 460px) {
+        .lrow { grid-template-columns: 3.6em 30px 3em 2.2em minmax(30px, 1fr) 2.2em; grid-template-areas: "d i r mn bar mx"; }
+        .lrow .c { display: none; }
+    }
+    @container tile (max-height: 300px) { .foot .pill { display: none; } }
+    @keyframes longIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
     #refresh svg { width: 16px; height: 16px; }
     #refresh.spin svg { animation: spin 1s linear infinite; }
 
@@ -455,6 +506,18 @@
         <symbol id="s-sunset" viewBox="0 0 16 16">
             <path d="M3 12a5 5 0 0 1 10 0M1 14.5h14M8 1.5v4M5.5 3.5 8 6l2.5-2.5" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
         </symbol>
+        <symbol id="s-cal" viewBox="0 0 16 16">
+            <path d="M3 3.5h10a1 1 0 0 1 1 1V13a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V4.5a1 1 0 0 1 1-1zM2 7h12M5.5 2v3M10.5 2v3" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+        </symbol>
+        <symbol id="s-close" viewBox="0 0 16 16">
+            <path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+        </symbol>
+        <symbol id="s-umbrella" viewBox="0 0 16 16">
+            <path d="M8 2a6 6 0 0 1 6 6H2a6 6 0 0 1 6-6zM8 8v4.5a1.5 1.5 0 0 1-3 0" stroke="currentColor" stroke-width="1.4" fill="none" stroke-linecap="round"/>
+        </symbol>
+        <symbol id="s-suns" viewBox="0 0 16 16">
+            <circle cx="8" cy="8" r="3" fill="currentColor"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2M3 3l1.4 1.4M11.6 11.6 13 13M3 13l1.4-1.4M11.6 4.4 13 3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+        </symbol>
         <symbol id="s-refresh" viewBox="0 0 16 16">
             <path d="M13.5 8a5.5 5.5 0 1 1-1.6-3.9M13.5 2v3.2h-3.2" stroke="currentColor" stroke-width="1.7" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
         </symbol>
@@ -601,7 +664,15 @@
         </section>
         <div class="foot">
             <span id="foot"></span>
+            <button id="longBtn" class="pill" type="button" aria-haspopup="dialog"><svg><use href="#s-cal"/></svg><span id="longBtnText"></span></button>
             <button id="refresh" type="button"><svg><use href="#s-refresh"/></svg></button>
+        </div>
+        <div class="long" id="long" role="dialog" aria-modal="true" aria-labelledby="longTitle" hidden>
+            <div class="long-head">
+                <h2 id="longTitle"></h2>
+                <button id="longClose" type="button"><svg><use href="#s-close"/></svg></button>
+            </div>
+            <div class="long-list" id="longList"></div>
         </div>
     </div>
     <div class="error" id="error" role="alert"></div>
@@ -1030,6 +1101,64 @@
         }
         var lastHours = null;
 
+        function renderLong(d, t) {
+            var btn = $('longBtn'), list = $('longList');
+            var rows = d.long || [];
+            btn.hidden = rows.length === 0;
+            $('longBtnText').textContent = t.longBtn || '14';
+            $('longTitle').textContent = t.longTitle || '';
+            $('longClose').setAttribute('aria-label', t.close || '');
+            clear(list);
+            if (rows.length === 0) { closeLong(); return; }
+            var lo = Infinity, hi = -Infinity;
+            rows.forEach(function (x) { lo = Math.min(lo, x[4]); hi = Math.max(hi, x[5]); });
+            var span = Math.max(1, hi - lo);
+            rows.forEach(function (x) {
+                // x = [Tag, Datum, Code, Wetterlage, Min, Max, Regen %, Regen mm, Sonne h, Wind, Böen]
+                var r = el('div', 'lrow');
+                var dd = el('div', 'd');
+                dd.appendChild(el('b', '', x[0]));
+                dd.appendChild(el('small', '', x[1]));
+                r.appendChild(dd);
+                r.appendChild(icon(x[2], 1));
+                var c = el('div', 'c');
+                c.appendChild(el('span', '', x[3]));
+                var meta = el('small');
+                var sun = el('i'); sun.appendChild(small('s-suns')); sun.appendChild(document.createTextNode(nf1.format(x[8]) + ' h'));
+                var wind = el('i'); wind.appendChild(small('s-arrow')); wind.appendChild(document.createTextNode(nf0.format(x[9]) + (x[10] > x[9] * 1.3 ? '–' + nf0.format(x[10]) : '') + ' ' + (d.unit || '')));
+                meta.appendChild(sun); meta.appendChild(wind);
+                c.appendChild(meta);
+                r.appendChild(c);
+                var rr = el('div', 'r', x[6] >= 10 ? x[6] + ' %' : '');
+                if (x[7] >= 0.1) { rr.appendChild(el('small', '', nf1.format(x[7]) + ' mm')); }
+                r.appendChild(rr);
+                r.appendChild(el('div', 'mn', deg(x[4])));
+                var bar = el('div', 'bar'), fill = el('i');
+                var left = (x[4] - lo) / span * 100, width = Math.max(3, (x[5] - x[4]) / span * 100);
+                fill.style.left = left + '%';
+                fill.style.width = width + '%';
+                fill.style.setProperty('--bw', (100 / width * 100) + '%');
+                fill.style.setProperty('--bx', (left / (100 - width || 1) * 100) + '%');
+                bar.appendChild(fill);
+                r.appendChild(bar);
+                r.appendChild(el('div', 'mx', deg(x[5])));
+                list.appendChild(r);
+            });
+        }
+        function openLong() {
+            $('long').hidden = false;
+            $('longList').scrollTop = 0;
+            $('longClose').focus();
+        }
+        function closeLong() {
+            if ($('long').hidden) { return; }
+            $('long').hidden = true;
+            $('longBtn').focus();
+        }
+        $('longBtn').addEventListener('click', openLong);
+        $('longClose').addEventListener('click', closeLong);
+        document.addEventListener('keydown', function (e) { if (e.key === 'Escape') { closeLong(); } });
+
         function renderDays(d, t) {
             var sec = $('daily');
             var box = $('days');
@@ -1138,6 +1267,7 @@
             fitSun();
             renderHours(d, t);
             renderDays(d, t);
+            renderLong(d, t);
 
             $('foot').textContent = (t.source || '') + ' · ' + (d.updated || '');
             $('refresh').setAttribute('aria-label', t.refresh || '');

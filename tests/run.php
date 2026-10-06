@@ -132,7 +132,7 @@ function forecast(array $override = []): array
     $offset = 7200;
     $midnight = (int) (floor(($now + $offset) / 86400) * 86400) - $offset;
     $days = [];
-    for ($i = 0; $i < 7; $i++) {
+    for ($i = 0; $i < 14; $i++) {
         $days[] = $midnight + $i * 86400;
     }
     $data = [
@@ -169,17 +169,17 @@ function forecast(array $override = []): array
         ],
         'daily' => [
             'time'                          => $days,
-            'weather_code'                  => [2, 61, 3, 0, 71, 95, 45],
-            'temperature_2m_max'            => [15.2, 13.1, 11.0, 16.4, 2.0, 21.5, 9.0],
-            'temperature_2m_min'            => [7.1, 6.0, 4.2, 5.5, -3.2, 12.0, 3.3],
-            'precipitation_sum'             => [0.4, 6.2, 0.0, 0.0, 3.1, 12.5, 0.1],
-            'precipitation_probability_max' => [65, 90, 10, 0, 70, 85, 20],
+            'weather_code'                  => [2, 61, 3, 0, 71, 95, 45, 2, 61, 3, 0, 71, 95, 45],
+            'temperature_2m_max'            => [15.2, 13.1, 11.0, 16.4, 2.0, 21.5, 9.0, 15.2, 13.1, 11.0, 16.4, 2.0, 21.5, 9.0],
+            'temperature_2m_min'            => [7.1, 6.0, 4.2, 5.5, -3.2, 12.0, 3.3, 7.1, 6.0, 4.2, 5.5, -3.2, 12.0, 3.3],
+            'precipitation_sum'             => [0.4, 6.2, 0.0, 0.0, 3.1, 12.5, 0.1, 0.4, 6.2, 0.0, 0.0, 3.1, 12.5, 0.1],
+            'precipitation_probability_max' => [65, 90, 10, 0, 70, 85, 20, 65, 90, 10, 0, 70, 85, 20],
             'sunrise'                       => array_map(static fn (int $d): int => $d + 7 * 3600 + 1800, $days),
             'sunset'                        => array_map(static fn (int $d): int => $d + 18 * 3600 + 3000, $days),
-            'sunshine_duration'             => [18000, 3600, 9000, 36000, 0, 20000, 1000],
-            'uv_index_max'                  => [3.1, 2.0, 2.2, 3.5, 1.0, 4.0, 1.5],
-            'wind_speed_10m_max'            => [20, 30, 15, 10, 25, 40, 8],
-            'wind_gusts_10m_max'            => [40, 55, 30, 20, 45, 80, 15],
+            'sunshine_duration'             => [18000, 3600, 9000, 36000, 0, 20000, 1000, 18000, 3600, 9000, 36000, 0, 20000, 1000],
+            'uv_index_max'                  => [3.1, 2.0, 2.2, 3.5, 1.0, 4.0, 1.5, 3.1, 2.0, 2.2, 3.5, 1.0, 4.0, 1.5],
+            'wind_speed_10m_max'            => [20, 30, 15, 10, 25, 40, 8, 20, 30, 15, 10, 25, 40, 8],
+            'wind_gusts_10m_max'            => [40, 55, 30, 20, 45, 80, 15, 40, 55, 30, 20, 45, 80, 15],
         ],
     ];
     return array_replace_recursive($data, $override);
@@ -283,7 +283,7 @@ ok(value($id, 'WarningLevel') === 3, 'Höchste Warnstufe 3 (Unwetter)');
 ok(str_starts_with((string) value($id, 'WarningText'), 'Storm gusts'), 'Schwerste Warnung steht oben');
 
 $data = json_decode(WETTER_GetForecast($id), true);
-ok(count($data['daily']) === 7 && count($data['hourly']) >= 46, 'GetForecast liefert 7 Tage und die Stunden');
+ok(count($data['daily']) === 14 && count($data['hourly']) >= 46, 'GetForecast liefert 14 Tage und die Stunden');
 ok($data['current']['condition'] === 'Partly cloudy', 'Wetterlage als Text');
 ok($data['current']['Visibility'] === 24.1, 'Sichtweite in km');
 ok(count(json_decode(WETTER_GetWarnings($id), true)) === 2, 'GetWarnings liefert 2 Warnungen');
@@ -292,6 +292,8 @@ $tile = json_decode(call($id, 'ReadAttributeString', ['TileData']), true);
 ok(isset($tile['now']) && $tile['now']['dir'] === 'NW', 'Kachel: aktuelles Wetter, Windrichtung NW');
 ok(count($tile['hours']) === 24 && $tile['hours'][0][0] === 'Now', 'Kachel: 24 Stunden, beginnend mit „Jetzt“');
 ok(count($tile['days']) === 7 && $tile['days'][0][0] === 'Today', 'Kachel: 7 Tage, beginnend mit „Heute“');
+ok(count($tile['long']) === 14 && $tile['long'][1][0] === 'Tomorrow' && $tile['long'][13][3] !== '', 'Kachel: 14-Tage-Vorhersage mit Wetterlage');
+ok(str_contains(call($id, 'ForecastUrl', [52.52, 13.405]), 'forecast_days=14'), '14 Tage werden abgefragt');
 ok($tile['warn'][0][0] === 3, 'Kachel: Warnungen sortiert');
 $html = WETTER_GetVisualizationTile($id);
 ok(!str_contains($html, '</script><img'), 'Kachel: Daten können das Skript nicht beenden');

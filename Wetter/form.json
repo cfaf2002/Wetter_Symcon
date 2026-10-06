@@ -301,6 +301,11 @@
                     ]
                 },
                 {
+                    "type": "CheckBox",
+                    "name": "TileShowLong",
+                    "caption": "Button for the 14-day forecast"
+                },
+                {
                     "type": "Label",
                     "caption": "The tile adapts to its size: small tiles show the current weather, larger ones add hours, days and warnings."
                 }
