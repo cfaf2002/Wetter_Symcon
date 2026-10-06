@@ -1,6 +1,7 @@
 {
     "translations": {
         "de": {
+            "%d places found – please select": "%d Orte gefunden – bitte auswählen",
             "1 – Weather warning (yellow)": "1 – Wetterwarnung (gelb)",
             "2 – Warning of markedly severe weather (orange)": "2 – Warnung vor markantem Wetter (orange)",
             "3 – Severe weather warning (red)": "3 – Unwetterwarnung (rot)",
@@ -44,6 +45,7 @@
             "Light freezing drizzle": "Leichter gefrierender Nieselregen",
             "Light freezing rain": "Leichter gefrierender Regen",
             "Location and query": "Standort und Abruf",
+            "Location taken over – please apply changes.": "Standort übernommen – bitte Änderungen übernehmen.",
             "MET Norway (Nordic countries)": "MET Norway (Skandinavien)",
             "Mainly clear": "Überwiegend klar",
             "Maximum distance to the station": "Höchstens so weit entfernt",
@@ -60,6 +62,7 @@
             "Next days": "Nächste Tage",
             "Next hours": "Nächste Stunden",
             "No DWD warning region (only available in Germany)": "Keine DWD-Warnregion (nur in Deutschland verfügbar)",
+            "No place found.": "Kein Ort gefunden.",
             "No warnings": "Keine Warnungen",
             "No weather warnings": "Keine Wetterwarnungen",
             "Now": "Jetzt",
@@ -68,6 +71,8 @@
             "Overcast": "Bedeckt",
             "Own location": "Eigener Standort",
             "Partly cloudy": "Teilweise bewölkt",
+            "Place search not reachable": "Ortssuche nicht erreichbar",
+            "Please enter a place or postal code.": "Bitte einen Ort oder eine Postleitzahl eingeben.",
             "Please set a location": "Bitte Standort festlegen",
             "Precipitation": "Niederschlag",
             "Precipitation (current)": "Niederschlag (aktuell)",
@@ -77,6 +82,9 @@
             "Pressure": "Luftdruck",
             "Query interval": "Abfrageintervall",
             "Rain in the next 2 hours": "Regen in den nächsten 2 Stunden",
+            "Search": "Suchen",
+            "Search place or postal code": "Ort oder Postleitzahl suchen",
+            "Search result": "Suchergebnis",
             "Severe weather warning": "Unwetterwarnung",
             "Show feels like, wind, humidity and UV": "Gefühlte Temperatur, Wind, Luftfeuchte und UV anzeigen",
             "Show weather warnings": "Wetterwarnungen anzeigen",

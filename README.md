@@ -2,7 +2,7 @@
 
 [![IP-Symcon ab 8.1](https://img.shields.io/badge/IP--Symcon-ab_8.1-0b6fb3.svg)](https://www.symcon.de)
 [![Optimiert für Symcon 9.0](https://img.shields.io/badge/optimiert_f%C3%BCr-Symcon_9.0-0b6fb3.svg)](https://www.symcon.de/de/service/dokumentation/installation/migrationen/v81-v90-q1-2026/)
-[![Modul-Version 1.1 (Build 4)](https://img.shields.io/badge/Modul--Version-1.1_(Build_4)-informational.svg)](library.json)
+[![Modul-Version 1.1 (Build 5)](https://img.shields.io/badge/Modul--Version-1.1_(Build_5)-informational.svg)](library.json)
 [![Tests](https://github.com/cfaf2002/Wetter_Symcon/actions/workflows/tests.yml/badge.svg)](https://github.com/cfaf2002/Wetter_Symcon/actions/workflows/tests.yml)
 [![PHP 8.3 und 8.5](https://img.shields.io/badge/PHP-8.3_%7C_8.5-777bb4.svg?logo=php&logoColor=white)](https://www.php.net)
 [![SDK: IPSModuleStrict](https://img.shields.io/badge/SDK-IPSModuleStrict-success.svg)](https://www.symcon.de/de/service/dokumentation/entwicklerbereich/sdk-tools/sdk-php/module/)
@@ -70,7 +70,7 @@ Danach eine Instanz **„Wetter“** anlegen (Hersteller „Open-Meteo / DWD“)
 
 | Einstellung | Bedeutung |
 | :-- | :-- |
-| Standort von Symcon verwenden | nimmt die Koordinaten aus *Kern-Instanzen → Location*; ausgeschaltet erscheint eine Karte für einen eigenen Standort |
+| Standort von Symcon verwenden | nimmt die Koordinaten aus *Kern-Instanzen → Location*; ausgeschaltet erscheinen eine Karte für einen eigenen Standort und die **Ortssuche** (Ortsname oder Postleitzahl, z. B. „Gerzen“ oder „31061“) – Treffer auswählen, „Änderungen übernehmen“ |
 | Name in der Kachel | Überschrift der Kachel; leer = Name der Instanz |
 | Wettermodell | *Automatisch* wählt das beste Modell für den Standort (in Deutschland meist DWD ICON) |
 | Abfrageintervall | 5–180 Minuten, Standard 15 |
@@ -137,6 +137,7 @@ $warnungen = json_decode(WETTER_GetWarnings(12345), true);
 
 - Nur HTTPS mit Zertifikatsprüfung, auch bei Weiterleitungen; Zeitlimit 20 s, Antworten höchstens 5 MB
 - Keine Zugangsdaten nötig; die Koordinaten werden auf vier Nachkommastellen (rund 10 m) gerundet übertragen
+- Die Ortssuche nutzt die Geocoding-API von Open-Meteo und läuft nur auf Knopfdruck
 - Pro Abruf zwei Anfragen (Open-Meteo mit allen Werten in einem Aufruf, Bright Sky für die Warnungen), mit DWD-Station drei; bei 15 Minuten sind das rund 100 Anfragen am Tag – weit unter der freien Grenze von Open-Meteo
 - Variablen und Kachel werden nur bei Änderungen aktualisiert
 - Kachel: Daten werden nur als Text bzw. SVG-Attribute gesetzt, nie als HTML; die Startdaten sind maskiert eingebettet; keine externen Dateien oder Schriften
@@ -162,6 +163,7 @@ Die Kachel nennt beide Quellen in der Fußzeile.
 
 | Version | Build | Datum | Beschreibung |
 | :-- | --: | :-- | :-- |
+| 1.1 | 5 | 06.10.2026 | Ortssuche nach Name oder Postleitzahl im Formular; Tests ohne Netzwerkzugriff und mit echter Bright-Sky-Antwort (behebt Fehlschlag unter PHP 8.5 auf GitHub) |
 | 1.1 | 4 | 06.10.2026 | Neu: Messwerte der nächsten DWD-Station statt Modellwerten (zuschaltbar), Variable „Messstation“, Anzeige in Kachel und Formular |
 | 1.0 | 3 | 06.10.2026 | Kachel: Farbschema „Wetter“ als echte Himmels-Szene (Sonnenschein, Wolken, Regen, Schnee, Nebel, Gewitter, Sterne); Platz für Titel und Vergrößern-Symbol von Symcon; große Kacheln wachsen mit; bessere Aufteilung bei wenig Höhe |
 | 1.0 | 2 | 06.10.2026 | Modul erscheint in der Geräteliste nur noch einmal als „Wetter“ (Suchbegriffe reduziert) |

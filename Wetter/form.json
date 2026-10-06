@@ -18,6 +18,40 @@
                     "visible": false
                 },
                 {
+                    "type": "RowLayout",
+                    "name": "PlaceSearchRow",
+                    "visible": false,
+                    "items": [
+                        {
+                            "type": "ValidationTextBox",
+                            "name": "PlaceSearch",
+                            "caption": "Search place or postal code",
+                            "save": false,
+                            "width": "300px"
+                        },
+                        {
+                            "type": "Button",
+                            "caption": "Search",
+                            "onClick": "IPS_RequestAction($id, 'SearchPlace', $PlaceSearch);"
+                        }
+                    ]
+                },
+                {
+                    "type": "Select",
+                    "name": "PlaceResult",
+                    "caption": "Search result",
+                    "save": false,
+                    "visible": false,
+                    "width": "600px",
+                    "options": [
+                        {
+                            "caption": "-",
+                            "value": ""
+                        }
+                    ],
+                    "onChange": "IPS_RequestAction($id, 'PickPlace', $PlaceResult);"
+                },
+                {
                     "type": "ValidationTextBox",
                     "name": "LocationName",
                     "caption": "Name in the tile (empty = name of the instance)",

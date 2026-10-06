@@ -28,6 +28,14 @@ if (!is_file($stubs . '/autoload.php')) {
     exit(2);
 }
 
+set_exception_handler(static function (Throwable $e): void {
+    $msg = get_class($e) . ': ' . $e->getMessage() . ' (' . basename($e->getFile()) . ':' . $e->getLine() . ')';
+    echo '  ✗ Abbruch: ' . $msg . PHP_EOL;
+    if (getenv('GITHUB_ACTIONS') === 'true') {
+        echo '::error title=Test abgebrochen::' . $msg . PHP_EOL;
+    }
+    exit(1);
+});
 set_error_handler(static function (int $no, string $str): bool {
     return $no === E_DEPRECATED || $no === E_USER_DEPRECATED || str_contains($str, 'could not be found');
 });
@@ -51,6 +59,14 @@ register_shutdown_function(static function () use ($copy): void {
     @rmdir($copy);
 });
 
+// Kein Netzwerk: echte Abrufe beim Übernehmen der Einstellungen sollen die Testdaten nicht beeinflussen.
+// curl nutzt den Proxy aus der Umgebung – ein nicht erreichbarer Proxy lässt jeden Abruf sofort scheitern.
+foreach (['https_proxy', 'HTTPS_PROXY', 'http_proxy', 'HTTP_PROXY', 'all_proxy', 'ALL_PROXY'] as $var) {
+    putenv($var . '=http://127.0.0.1:9');
+}
+putenv('no_proxy=');
+putenv('NO_PROXY=');
+
 require $copy . '/autoload.php';
 
 \IPS\Kernel::reset();
@@ -65,6 +81,10 @@ function ok(bool $condition, string $message): void
 {
     global $failed, $passed;
     echo ($condition ? '  ✓ ' : '  ✗ ') . $message . PHP_EOL;
+    if (!$condition && getenv('GITHUB_ACTIONS') === 'true') {
+        // als Annotation sichtbar machen (auch ohne Anmeldung über die API lesbar)
+        echo '::error title=Test fehlgeschlagen::' . $message . PHP_EOL;
+    }
     $condition ? $passed++ : $failed++;
 }
 
@@ -359,6 +379,11 @@ call($id, 'Process', [forecast(), alerts([]), station([], 3 * 3600)]);
 ok(value($id, 'Temperature') === 12.3 && str_contains((string) value($id, 'StationName'), 'model values'), 'Veraltete Messwerte: Modellwerte');
 call($id, 'Process', [forecast(), alerts([]), null]);
 ok(value($id, 'Temperature') === 12.3, 'Ohne Stationsantwort: Modellwerte');
+// echte Antwort von Bright Sky (Berlin-Tempelhof), Zeitstempel auf jetzt gesetzt
+$real = json_decode('{"weather":{"source_id":303711,"timestamp":"' . gmdate('c', time() - 1800) . '","cloud_cover":100,"condition":"dry","dew_point":11.64,"solar_10":null,"solar_30":null,"solar_60":null,"precipitation_10":0.0,"precipitation_30":0.0,"precipitation_60":0.0,"pressure_msl":1020.4,"relative_humidity":78,"visibility":22021,"wind_direction_10":270,"wind_direction_30":273,"wind_direction_60":270,"wind_speed_10":7.9,"wind_speed_30":7.6,"wind_speed_60":7.9,"wind_gust_direction_10":290,"wind_gust_direction_30":290,"wind_gust_direction_60":290,"wind_gust_speed_10":11.2,"wind_gust_speed_30":12.2,"wind_gust_speed_60":13.0,"sunshine_30":null,"sunshine_60":null,"temperature":15.5,"icon":"cloudy"},"sources":[{"id":303711,"dwd_station_id":"00433","observation_type":"synop","lat":52.4676,"lon":13.402,"height":47.7,"station_name":"Berlin-Tempelhof","wmo_station_id":"10384","first_record":"2026-10-05T03:30:00+00:00","last_record":"2026-10-06T09:00:00+00:00","distance":5837.0}]}', true);
+call($id, 'Process', [forecast(), alerts([]), $real]);
+ok(value($id, 'Temperature') === 15.5 && value($id, 'Humidity') === 78 && value($id, 'CloudCover') === 100, 'Echte Bright-Sky-Antwort wird übernommen');
+ok(value($id, 'StationName') === 'Measured: Berlin-Tempelhof · 5.8 km', 'Echte Station mit Entfernung');
 IPS_SetProperty($id, 'UseStation', false);
 IPS_ApplyChanges($id);
 ok(!exists($id, 'StationName'), 'Abgeschaltet: Variable entfernt');
@@ -366,12 +391,13 @@ ok(!exists($id, 'StationName'), 'Abgeschaltet: Variable entfernt');
 // ---------------------------------------------------------------------------
 echo 'Fehlerfälle' . PHP_EOL;
 call($id, 'WriteAttributeInteger', ['FailCount', 0]);
+$lastTemperature = value($id, 'Temperature');
 for ($i = 0; $i < 3; $i++) {
     $r = call($id, 'Process', [['error' => true, 'reason' => 'x'], null]);
 }
 ok($r === false, 'Ungültige Antwort wird abgelehnt');
 ok(IPS_GetInstance($id)['InstanceStatus'] === 201, 'Nach drei Fehlschlägen Status 201');
-ok(value($id, 'Temperature') === 12.3, 'Letzte Werte bleiben erhalten');
+ok(value($id, 'Temperature') === $lastTemperature, 'Letzte Werte bleiben erhalten');
 $tile = json_decode(call($id, 'ReadAttributeString', ['TileData']), true);
 ok(isset($tile['now']) && $tile['error'] === 'Weather data could not be loaded', 'Kachel zeigt Fehler und letzte Werte');
 call($id, 'Process', [forecast(), alerts([])]);

@@ -21,6 +21,7 @@ class Wetter extends IPSModuleStrict
     private const FORECAST_URL = 'https://api.open-meteo.com/v1/forecast';
     private const ALERTS_URL = 'https://api.brightsky.dev/alerts';
     private const STATION_URL = 'https://api.brightsky.dev/current_weather';
+    private const GEOCODING_URL = 'https://geocoding-api.open-meteo.com/v1/search';
 
     // Stationswerte gelten nur, wenn sie höchstens so alt sind (Sekunden)
     private const STATION_MAX_AGE = 7200;
@@ -164,8 +165,28 @@ class Wetter extends IPSModuleStrict
                 break;
 
             case 'ToggleLocation':
-                // Formular: eigene Koordinaten nur zeigen, wenn nicht der Symcon-Standort gilt
-                $this->UpdateFormField('Location', 'visible', !(bool) $Value);
+                // Formular: eigene Koordinaten und Ortssuche nur zeigen, wenn nicht der Symcon-Standort gilt
+                foreach (['Location', 'PlaceSearchRow'] as $field) {
+                    $this->UpdateFormField($field, 'visible', !(bool) $Value);
+                }
+                if ((bool) $Value) {
+                    $this->UpdateFormField('PlaceResult', 'visible', false);
+                }
+                break;
+
+            case 'SearchPlace':
+                $this->SearchPlace(trim((string) $Value));
+                break;
+
+            case 'PickPlace':
+                $place = json_decode((string) $Value, true);
+                if (is_array($place) && isset($place['lat'], $place['lon'])) {
+                    $this->UpdateFormField('Location', 'value', (string) json_encode(['latitude' => (float) $place['lat'], 'longitude' => (float) $place['lon']]));
+                    if (trim($this->ReadPropertyString('LocationName')) === '' && isset($place['name'])) {
+                        $this->UpdateFormField('LocationName', 'value', (string) $place['name']);
+                    }
+                    echo $this->Translate('Location taken over – please apply changes.');
+                }
                 break;
 
             default:
@@ -182,6 +203,7 @@ class Wetter extends IPSModuleStrict
             : sprintf($this->Translate('Use the location of Symcon (%s, %s)'), number_format($symcon[0], 4, ',', ''), number_format($symcon[1], 4, ',', ''));
         $this->InjectProperty($form['elements'], 'UseSymconLocation', 'caption', $caption);
         $this->InjectProperty($form['elements'], 'Location', 'visible', !$this->ReadPropertyBoolean('UseSymconLocation'));
+        $this->InjectProperty($form['elements'], 'PlaceSearchRow', 'visible', !$this->ReadPropertyBoolean('UseSymconLocation'));
 
         // zuletzt genutzte Messstation anzeigen
         $station = json_decode($this->GetBuffer('Station'), true);
@@ -953,6 +975,54 @@ class Wetter extends IPSModuleStrict
         ];
         $this->SetBuffer('Station', (string) json_encode($info));
         return $info;
+    }
+
+    /**
+     * Ortssuche über die Geocoding-API von Open-Meteo; Treffer kommen in die Auswahl im Formular.
+     */
+    private function SearchPlace(string $query): void
+    {
+        if (mb_strlen($query) < 2) {
+            echo $this->Translate('Please enter a place or postal code.');
+            return;
+        }
+        $error = '';
+        $result = $this->HttpGetJson(self::GEOCODING_URL . '?' . http_build_query([
+            'name'     => mb_substr($query, 0, 100),
+            'count'    => 10,
+            'language' => $this->Language(),
+            'format'   => 'json',
+        ]), $error);
+        if ($result === null) {
+            echo $this->Translate('Place search not reachable') . ' (' . $error . ')';
+            return;
+        }
+        $options = [];
+        foreach ((array) ($result['results'] ?? []) as $place) {
+            if (!is_array($place) || !isset($place['latitude'], $place['longitude'])) {
+                continue;
+            }
+            $parts = array_filter([
+                (string) ($place['name'] ?? ''),
+                implode(', ', array_slice((array) ($place['postcodes'] ?? []), 0, 2)),
+                ($place['admin4'] ?? '') !== ($place['name'] ?? '') ? (string) ($place['admin4'] ?? '') : '',
+                (string) ($place['admin3'] ?? $place['admin2'] ?? ''),
+                (string) ($place['admin1'] ?? ''),
+                (string) ($place['country_code'] ?? ''),
+            ], static fn (string $p): bool => $p !== '');
+            $options[] = [
+                'caption' => implode(' · ', array_unique($parts)) . sprintf(' (%.4f, %.4f)', (float) $place['latitude'], (float) $place['longitude']),
+                'value'   => (string) json_encode(['lat' => round((float) $place['latitude'], 4), 'lon' => round((float) $place['longitude'], 4), 'name' => (string) ($place['name'] ?? '')]),
+            ];
+        }
+        if (count($options) === 0) {
+            echo $this->Translate('No place found.');
+            return;
+        }
+        array_unshift($options, ['caption' => sprintf($this->Translate('%d places found – please select'), count($options)), 'value' => '']);
+        $this->UpdateFormField('PlaceResult', 'options', (string) json_encode($options));
+        $this->UpdateFormField('PlaceResult', 'value', '');
+        $this->UpdateFormField('PlaceResult', 'visible', true);
     }
 
     private function StationLabel(array $station): string
