@@ -96,7 +96,7 @@
     .station:empty { display: none; }
 
     /* ---------- Kurzwerte ---------- */
-    .chips { grid-area: chips; display: flex; flex-wrap: wrap; gap: 6px; max-height: 66px; overflow: hidden; }
+    .chips { grid-area: chips; display: flex; flex-wrap: wrap; gap: 6px; max-height: 58px; overflow: hidden; }
     .chip {
         display: inline-flex; align-items: center; gap: 6px;
         padding: 5px 10px; border-radius: var(--pill);
@@ -321,11 +321,13 @@
 
     /* ---------- Bewegung (ruht, wenn die Kachel nicht sichtbar ist) ---------- */
     .hero .rays { transform-origin: 32px 32px; animation: spin 60s linear infinite; }
+    .hero .pulse { transform-box: fill-box; transform-origin: center; animation: pulse 4s ease-in-out infinite alternate; }
     .hero .drops { animation: fall 1.1s linear infinite; }
     .hero .flakes { animation: drift 3s ease-in-out infinite alternate; }
     .hero .cloudmove { animation: drift 6s ease-in-out infinite alternate; }
     html.paused * { animation-play-state: paused !important; }
     @keyframes spin { to { transform: rotate(360deg); } }
+    @keyframes pulse { from { transform: scale(.92); opacity: .8; } to { transform: scale(1.06); opacity: 1; } }
     @keyframes fall { from { transform: translateY(-3px); opacity: .5; } 60% { opacity: 1; } to { transform: translateY(4px); opacity: .2; } }
     @keyframes drift { from { transform: translateX(-1.5px); } to { transform: translateX(1.5px); } }
 </style>
@@ -395,6 +397,104 @@
         <symbol id="s-refresh" viewBox="0 0 16 16">
             <path d="M13.5 8a5.5 5.5 0 1 1-1.6-3.9M13.5 2v3.2h-3.2" stroke="currentColor" stroke-width="1.7" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
         </symbol>
+
+        <!-- ===== Plastische Symbole (Farbverläufe, Schatten) ===== -->
+        <radialGradient id="g-sun" cx="40%" cy="35%" r="65%">
+            <stop offset="0" stop-color="#fff8c4"/><stop offset=".45" stop-color="#ffd23f"/><stop offset="1" stop-color="#f29a1f"/>
+        </radialGradient>
+        <radialGradient id="g-glow">
+            <stop offset=".45" stop-color="#ffd860" stop-opacity=".55"/><stop offset="1" stop-color="#ffd860" stop-opacity="0"/>
+        </radialGradient>
+        <radialGradient id="g-moon" cx="35%" cy="35%" r="70%">
+            <stop offset="0" stop-color="#fffbe8"/><stop offset=".6" stop-color="#f4e1a0"/><stop offset="1" stop-color="#d8b75a"/>
+        </radialGradient>
+        <linearGradient id="g-cloud" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#ffffff"/><stop offset=".55" stop-color="#f1f4f8"/><stop offset="1" stop-color="#c4ced9"/>
+        </linearGradient>
+        <linearGradient id="g-cloudgrey" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#f2f5f8"/><stop offset=".55" stop-color="#cdd5de"/><stop offset="1" stop-color="#8f9caa"/>
+        </linearGradient>
+        <linearGradient id="g-clouddark" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#c9d0d9"/><stop offset=".55" stop-color="#8e99a7"/><stop offset="1" stop-color="#5d6877"/>
+        </linearGradient>
+        <linearGradient id="g-drop" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#9fd8ff"/><stop offset="1" stop-color="#2a78d6"/>
+        </linearGradient>
+        <linearGradient id="g-bolt" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#fff59a"/><stop offset="1" stop-color="#f5a800"/>
+        </linearGradient>
+        <filter id="f-soft" x="-20%" y="-20%" width="140%" height="160%">
+            <feGaussianBlur stdDeviation="1.4"/>
+        </filter>
+        <symbol id="p-sun" viewBox="0 0 64 64">
+            <circle class="pulse" cx="32" cy="32" r="29" fill="url(#g-glow)"/>
+            <circle cx="32" cy="32" r="18" fill="url(#g-sun)"/>
+            <ellipse cx="26" cy="25" rx="6" ry="3.8" fill="#fff" opacity=".45"/>
+        </symbol>
+        <symbol id="p-sunsm" viewBox="0 0 64 64">
+            <circle class="pulse" cx="40" cy="22" r="20" fill="url(#g-glow)"/>
+            <circle cx="40" cy="22" r="12" fill="url(#g-sun)"/>
+            <ellipse cx="36" cy="17" rx="4" ry="2.5" fill="#fff" opacity=".45"/>
+        </symbol>
+        <symbol id="p-moon" viewBox="0 0 64 64">
+            <path d="M38 12a20 20 0 1 0 15 30A16 16 0 0 1 38 12z" fill="url(#g-moon)"/>
+        </symbol>
+        <symbol id="p-moonsm" viewBox="0 0 64 64">
+            <path d="M40 6a15 15 0 1 0 11.5 23A12 12 0 0 1 40 6z" fill="url(#g-moon)"/>
+        </symbol>
+        <symbol id="p-cloud" viewBox="0 0 64 64">
+            <path d="M14 50a9 9 0 0 1 0-18 12 12 0 0 1 21-8 10 10 0 0 1 17 6 9.5 9.5 0 0 1 2 20z" fill="#1a2633" opacity=".28" filter="url(#f-soft)" transform="translate(1.5 2.5)"/>
+            <path d="M14 50a9 9 0 0 1 0-18 12 12 0 0 1 21-8 10 10 0 0 1 17 6 9.5 9.5 0 0 1 2 20z" fill="url(#g-cloud)" stroke="#4f6378" stroke-opacity=".35" stroke-width=".8"/>
+            <ellipse cx="30" cy="31" rx="8" ry="3.5" fill="#fff" opacity=".7"/>
+        </symbol>
+        <symbol id="p-cloudback" viewBox="0 0 64 64">
+            <g transform="translate(14 -10) scale(.78)">
+                <path d="M14 50a9 9 0 0 1 0-18 12 12 0 0 1 21-8 10 10 0 0 1 17 6 9.5 9.5 0 0 1 2 20z" fill="url(#g-cloudgrey)" stroke="#4f6378" stroke-opacity=".35" stroke-width=".8"/>
+            </g>
+        </symbol>
+        <symbol id="p-cloudhi" viewBox="0 0 64 64">
+            <path d="M14 42a9 9 0 0 1 0-18 12 12 0 0 1 21-8 10 10 0 0 1 17 6 9.5 9.5 0 0 1 2 20z" fill="#1a2633" opacity=".28" filter="url(#f-soft)" transform="translate(1.5 2.5)"/>
+            <path d="M14 42a9 9 0 0 1 0-18 12 12 0 0 1 21-8 10 10 0 0 1 17 6 9.5 9.5 0 0 1 2 20z" fill="url(#g-cloud)" stroke="#4f6378" stroke-opacity=".35" stroke-width=".8"/>
+            <ellipse cx="30" cy="23" rx="8" ry="3.5" fill="#fff" opacity=".7"/>
+        </symbol>
+        <symbol id="p-cloudrain" viewBox="0 0 64 64">
+            <path d="M14 42a9 9 0 0 1 0-18 12 12 0 0 1 21-8 10 10 0 0 1 17 6 9.5 9.5 0 0 1 2 20z" fill="#1a2633" opacity=".3" filter="url(#f-soft)" transform="translate(1.5 2.5)"/>
+            <path d="M14 42a9 9 0 0 1 0-18 12 12 0 0 1 21-8 10 10 0 0 1 17 6 9.5 9.5 0 0 1 2 20z" fill="url(#g-cloudgrey)" stroke="#4f6378" stroke-opacity=".35" stroke-width=".8"/>
+            <ellipse cx="30" cy="23" rx="8" ry="3.5" fill="#fff" opacity=".55"/>
+        </symbol>
+        <symbol id="p-clouddark" viewBox="0 0 64 64">
+            <path d="M14 42a9 9 0 0 1 0-18 12 12 0 0 1 21-8 10 10 0 0 1 17 6 9.5 9.5 0 0 1 2 20z" fill="#0d141c" opacity=".35" filter="url(#f-soft)" transform="translate(1.5 2.5)"/>
+            <path d="M14 42a9 9 0 0 1 0-18 12 12 0 0 1 21-8 10 10 0 0 1 17 6 9.5 9.5 0 0 1 2 20z" fill="url(#g-clouddark)" stroke="#4f6378" stroke-opacity=".35" stroke-width=".8"/>
+            <ellipse cx="30" cy="23" rx="8" ry="3.5" fill="#fff" opacity=".3"/>
+        </symbol>
+        <symbol id="p-rain" viewBox="0 0 64 64">
+            <g class="drops" fill="url(#g-drop)">
+                <path d="M22 45c-2.2 3.2-3.4 5-3.4 6.6a3.4 3.4 0 0 0 6.8 0c0-1.6-1.2-3.4-3.4-6.6z"/><path d="M33 49c-2.2 3.2-3.4 5-3.4 6.6a3.4 3.4 0 0 0 6.8 0c0-1.6-1.2-3.4-3.4-6.6z"/><path d="M44 45c-2.2 3.2-3.4 5-3.4 6.6a3.4 3.4 0 0 0 6.8 0c0-1.6-1.2-3.4-3.4-6.6z"/>
+            </g>
+        </symbol>
+        <symbol id="p-drizzle" viewBox="0 0 64 64">
+            <g class="drops" fill="url(#g-drop)">
+                <path transform="translate(22 46) scale(.6) translate(-22 -46)" d="M22 46c-2.2 3.2-3.4 5-3.4 6.6a3.4 3.4 0 0 0 6.8 0c0-1.6-1.2-3.4-3.4-6.6z"/>
+                <path transform="translate(33 50) scale(.6) translate(-33 -50)" d="M33 50c-2.2 3.2-3.4 5-3.4 6.6a3.4 3.4 0 0 0 6.8 0c0-1.6-1.2-3.4-3.4-6.6z"/>
+                <path transform="translate(44 46) scale(.6) translate(-44 -46)" d="M44 46c-2.2 3.2-3.4 5-3.4 6.6a3.4 3.4 0 0 0 6.8 0c0-1.6-1.2-3.4-3.4-6.6z"/>
+            </g>
+        </symbol>
+        <symbol id="p-snow" viewBox="0 0 64 64">
+            <g class="flakes" stroke="#f4f9ff" stroke-width="2.2" stroke-linecap="round" fill="none">
+                <path transform="translate(22 51)" d="m0-4.2v8.4m-3.64-6.3 7.28 4.2m-7.28 0 7.28-4.2"/><path transform="translate(33 56)" d="m0-4.2v8.4m-3.64-6.3 7.28 4.2m-7.28 0 7.28-4.2"/><path transform="translate(44 51)" d="m0-4.2v8.4m-3.64-6.3 7.28 4.2m-7.28 0 7.28-4.2"/>
+            </g>
+            <g stroke="#5f8fbd" stroke-width=".9" stroke-linecap="round" fill="none">
+                <path transform="translate(22 51)" d="m0-4.2v8.4m-3.64-6.3 7.28 4.2m-7.28 0 7.28-4.2"/><path transform="translate(33 56)" d="m0-4.2v8.4m-3.64-6.3 7.28 4.2m-7.28 0 7.28-4.2"/><path transform="translate(44 51)" d="m0-4.2v8.4m-3.64-6.3 7.28 4.2m-7.28 0 7.28-4.2"/>
+            </g>
+        </symbol>
+        <symbol id="p-fog" viewBox="0 0 64 64">
+            <g stroke-linecap="round" stroke-width="3.6">
+                <path d="M12 48h40" stroke="#d3dbe3"/><path d="M17 55h32" stroke="#b3bfcb"/><path d="M22 61.5h20" stroke="#95a3b2"/>
+            </g>
+        </symbol>
+        <symbol id="p-bolt" viewBox="0 0 64 64">
+            <path d="M34 39l-9 13h7l-3 11 12-15h-7l4-9z" fill="url(#g-bolt)" stroke="#c77700" stroke-width=".8" stroke-linejoin="round"/>
+        </symbol>
     </defs>
 </svg>
 
@@ -459,6 +559,21 @@
             return 'cloudy';
         }
 
+        // plastische Symbole (Standard)
+        var PLASTIC = {
+            clear: function (day) { return [day ? 'p-sun' : 'p-moon']; },
+            partly: function (day) { return [day ? 'p-sunsm' : 'p-moonsm', 'p-cloud']; },
+            cloudy: function () { return ['p-cloudback', 'p-cloud']; },
+            fog: function () { return ['p-cloudhi', 'p-fog']; },
+            drizzle: function (day, code) { return (day && code >= 80 ? ['p-sunsm'] : []).concat(['p-cloudrain', 'p-drizzle']); },
+            // Schauer (80–82) bei Tag: Sonne hinter der Regenwolke
+            rain: function (day, code) { return (day && code >= 80 ? ['p-sunsm'] : []).concat(['p-cloudrain', 'p-rain']); },
+            snow: function (day, code) { return (day && code >= 85 ? ['p-sunsm'] : []).concat(['p-cloudhi', 'p-snow']); },
+            thunder: function () { return ['p-clouddark', 'p-bolt']; }
+        };
+        var iconStyle = 0;
+
+        // flache Symbole
         var LAYERS = {
             clear: function (day) { return [day ? 's-sun' : 's-moon']; },
             partly: function (day) { return [day ? 's-sunsm' : 's-moonsm', 's-cloud']; },
@@ -491,7 +606,7 @@
                 svg.setAttribute('aria-hidden', 'true');
             }
             while (svg.firstChild) { svg.removeChild(svg.firstChild); }
-            LAYERS[group(code)](!!day).forEach(function (id) {
+            (iconStyle === 1 ? LAYERS : PLASTIC)[group(code)](!!day, code).forEach(function (id) {
                 if (!inline) { use(svg, id); return; }
                 // großes Symbol als echte Kopie, damit es animiert werden kann
                 var src = document.getElementById(id);
@@ -644,6 +759,7 @@
             applyTheme(theme === 1 ? 1 : (theme === 2 ? 2 : 0));
             tile.classList.toggle('sky', theme === 3);
             var t = d.i18n || {};
+            iconStyle = d.icons === 1 ? 1 : 0;
             if (d.lang) {
                 nf0 = new Intl.NumberFormat(d.lang, { maximumFractionDigits: 0 });
                 nf1 = new Intl.NumberFormat(d.lang, { maximumFractionDigits: 1 });

@@ -242,6 +242,21 @@
                     ]
                 },
                 {
+                    "type": "Select",
+                    "name": "TileIconStyle",
+                    "caption": "Weather symbols",
+                    "options": [
+                        {
+                            "caption": "Three-dimensional (with gradients)",
+                            "value": 0
+                        },
+                        {
+                            "caption": "Flat",
+                            "value": 1
+                        }
+                    ]
+                },
+                {
                     "type": "CheckBox",
                     "name": "TileShowDetails",
                     "caption": "Show feels like, wind, humidity and UV"

@@ -91,6 +91,7 @@ class Wetter extends IPSModuleStrict
         // Kachel
         $this->RegisterPropertyBoolean('UseTile', true);
         $this->RegisterPropertyInteger('TileTheme', 0);
+        $this->RegisterPropertyInteger('TileIconStyle', 0);
         $this->RegisterPropertyBoolean('TileShowDetails', true);
         $this->RegisterPropertyBoolean('TileShowWarnings', true);
         $this->RegisterPropertyBoolean('TileShowHourly', true);
@@ -532,6 +533,7 @@ class Wetter extends IPSModuleStrict
 
         return [
             'theme' => $this->ReadPropertyInteger('TileTheme'),
+            'icons' => $this->ReadPropertyInteger('TileIconStyle'),
             'lang'  => $german ? 'de' : 'en',
             'name'  => $name,
             // geschütztes Leerzeichen, damit „0,3 km“ nicht auseinanderbricht
