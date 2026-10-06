@@ -1,0 +1,12 @@
+{
+    "id": "{F4A6F329-4A46-43B6-9A8B-3A4AF0327CB5}",
+    "author": "Armin Frohwerk",
+    "name": "Wetter",
+    "url": "https://github.com/cfaf2002/Wetter_Symcon",
+    "compatibility": {
+        "version": "8.1"
+    },
+    "version": "1.0",
+    "build": 1,
+    "date": 1791276167
+}

@@ -1,0 +1,17 @@
+{
+    "id": "{4389ADEF-256A-4228-9091-7DECC8A9D367}",
+    "name": "Wetter",
+    "type": 3,
+    "vendor": "Open-Meteo / DWD",
+    "aliases": [
+        "Wetter",
+        "Wettervorhersage",
+        "Unwetterwarnung",
+        "Weather"
+    ],
+    "parentRequirements": [],
+    "childRequirements": [],
+    "implemented": [],
+    "prefix": "WETTER",
+    "url": "https://github.com/cfaf2002/Wetter_Symcon"
+}

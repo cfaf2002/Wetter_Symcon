@@ -1,0 +1,197 @@
+{
+    "elements": [
+        {
+            "type": "ExpansionPanel",
+            "caption": "Location and query",
+            "expanded": true,
+            "items": [
+                {
+                    "type": "CheckBox",
+                    "name": "UseSymconLocation",
+                    "caption": "Use the location of Symcon",
+                    "onChange": "IPS_RequestAction($id, 'ToggleLocation', $UseSymconLocation);"
+                },
+                {
+                    "type": "SelectLocation",
+                    "name": "Location",
+                    "caption": "Own location",
+                    "visible": false
+                },
+                {
+                    "type": "ValidationTextBox",
+                    "name": "LocationName",
+                    "caption": "Name in the tile (empty = name of the instance)",
+                    "width": "400px"
+                },
+                {
+                    "type": "Select",
+                    "name": "Model",
+                    "caption": "Weather model",
+                    "options": [
+                        { "caption": "Automatic – best model for the location (recommended)", "value": "best_match" },
+                        { "caption": "DWD ICON (Germany, Europe)", "value": "icon_seamless" },
+                        { "caption": "ECMWF IFS (Europe)", "value": "ecmwf_ifs025" },
+                        { "caption": "NOAA GFS (USA)", "value": "gfs_seamless" },
+                        { "caption": "Météo-France", "value": "meteofrance_seamless" },
+                        { "caption": "MET Norway (Nordic countries)", "value": "metno_seamless" }
+                    ]
+                },
+                {
+                    "type": "NumberSpinner",
+                    "name": "Interval",
+                    "caption": "Query interval",
+                    "suffix": "min",
+                    "minimum": 5,
+                    "maximum": 180
+                },
+                {
+                    "type": "Select",
+                    "name": "WindUnit",
+                    "caption": "Unit of wind speed",
+                    "options": [
+                        { "caption": "km/h", "value": "kmh" },
+                        { "caption": "m/s", "value": "ms" },
+                        { "caption": "Knots", "value": "kn" }
+                    ]
+                }
+            ]
+        },
+        {
+            "type": "ExpansionPanel",
+            "caption": "Variables",
+            "items": [
+                {
+                    "type": "Label",
+                    "caption": "Always created: temperature, feels like, humidity, weather, precipitation, wind and time of data."
+                },
+                {
+                    "type": "CheckBox",
+                    "name": "ShowDetails",
+                    "caption": "Details: dew point, cloud cover, air pressure, visibility, UV index"
+                },
+                {
+                    "type": "CheckBox",
+                    "name": "ShowSun",
+                    "caption": "Sun: sunrise, sunset, sunshine duration today"
+                },
+                {
+                    "type": "CheckBox",
+                    "name": "ShowForecast",
+                    "caption": "Forecast: today and tomorrow, rain in the next 2 hours"
+                }
+            ]
+        },
+        {
+            "type": "ExpansionPanel",
+            "caption": "Weather warnings (DWD)",
+            "items": [
+                {
+                    "type": "CheckBox",
+                    "name": "ShowWarnings",
+                    "caption": "Create variables for official DWD weather warnings"
+                },
+                {
+                    "type": "Select",
+                    "name": "WarningMinLevel",
+                    "caption": "Consider from level",
+                    "options": [
+                        { "caption": "1 – Weather warning (yellow)", "value": 1 },
+                        { "caption": "2 – Warning of markedly severe weather (orange)", "value": 2 },
+                        { "caption": "3 – Severe weather warning (red)", "value": 3 },
+                        { "caption": "4 – Warning of extreme weather (violet)", "value": 4 }
+                    ]
+                },
+                {
+                    "type": "Label",
+                    "caption": "Warnings are only available for locations in Germany (data: Deutscher Wetterdienst via Bright Sky)."
+                }
+            ]
+        },
+        {
+            "type": "ExpansionPanel",
+            "caption": "Tile",
+            "items": [
+                {
+                    "type": "CheckBox",
+                    "name": "UseTile",
+                    "caption": "Use own tile in the tile visualization"
+                },
+                {
+                    "type": "Select",
+                    "name": "TileTheme",
+                    "caption": "Color scheme of the tile",
+                    "options": [
+                        { "caption": "Symcon design – colors of the visualization", "value": 0 },
+                        { "caption": "Dark", "value": 1 },
+                        { "caption": "Light", "value": 2 },
+                        { "caption": "Weather – sky matching the current weather", "value": 3 }
+                    ]
+                },
+                {
+                    "type": "CheckBox",
+                    "name": "TileShowDetails",
+                    "caption": "Show feels like, wind, humidity and UV"
+                },
+                {
+                    "type": "CheckBox",
+                    "name": "TileShowWarnings",
+                    "caption": "Show weather warnings"
+                },
+                {
+                    "type": "RowLayout",
+                    "items": [
+                        {
+                            "type": "CheckBox",
+                            "name": "TileShowHourly",
+                            "caption": "Hourly forecast"
+                        },
+                        {
+                            "type": "NumberSpinner",
+                            "name": "TileHours",
+                            "caption": "Hours",
+                            "minimum": 6,
+                            "maximum": 48
+                        }
+                    ]
+                },
+                {
+                    "type": "RowLayout",
+                    "items": [
+                        {
+                            "type": "CheckBox",
+                            "name": "TileShowDaily",
+                            "caption": "Daily forecast"
+                        },
+                        {
+                            "type": "NumberSpinner",
+                            "name": "TileDays",
+                            "caption": "Days",
+                            "minimum": 3,
+                            "maximum": 7
+                        }
+                    ]
+                },
+                {
+                    "type": "Label",
+                    "caption": "The tile adapts to its size: small tiles show the current weather, larger ones add hours, days and warnings."
+                }
+            ]
+        }
+    ],
+    "actions": [
+        {
+            "type": "Button",
+            "caption": "Update now",
+            "onClick": "WETTER_Update($id);"
+        },
+        {
+            "type": "Label",
+            "caption": "Data: Open-Meteo.com (CC BY 4.0) · Weather warnings: Deutscher Wetterdienst via Bright Sky"
+        }
+    ],
+    "status": [
+        { "code": 102, "icon": "active", "caption": "Weather is being queried" },
+        { "code": 104, "icon": "inactive", "caption": "Please set a location" },
+        { "code": 201, "icon": "error", "caption": "Open-Meteo not reachable or invalid response" }
+    ]
+}
