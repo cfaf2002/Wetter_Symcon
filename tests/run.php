@@ -308,6 +308,29 @@ ok(IPS_GetVariable($vid)['VariableUpdated'] === $before, 'Unveränderte Werte we
 ok(value($id, 'WarningCount') === 0 && value($id, 'WarningText') === 'No warnings', 'Warnungen aufgehoben');
 
 // ---------------------------------------------------------------------------
+echo 'Regen bald und „Jetzt“' . PHP_EOL;
+// Open-Meteo: Niederschlag eines Stundenwerts gilt für die Stunde davor (Index 0 = vergangene Stunde)
+$rainAt = static function (int $index): array {
+    return ['hourly' => ['precipitation' => array_map(static fn (int $i): float => $i === $index ? 0.5 : 0.0, range(0, 47))]];
+};
+call($id, 'Process', [forecast($rainAt(0)), alerts([])]);
+ok(value($id, 'RainSoon') === false, 'Regen der vergangenen Stunde zählt nicht als „bald Regen“');
+call($id, 'Process', [forecast($rainAt(3)), alerts([])]);
+ok(value($id, 'RainSoon') === true, 'Regen, der in weniger als 2 Stunden beginnt, wird erkannt');
+call($id, 'Process', [forecast($rainAt(4)), alerts([])]);
+ok(value($id, 'RainSoon') === false, 'Regen, der erst nach 2 Stunden beginnt, zählt nicht');
+call($id, 'Process', [forecast(['current' => ['weather_code' => 3, 'is_day' => 0]]), alerts([])]);
+$tile = json_decode(call($id, 'ReadAttributeString', ['TileData']), true);
+ok($tile['hours'][0][1] === 3 && $tile['hours'][0][2] === 0, 'Kachel: „Jetzt“ zeigt das aktuelle Wetter statt der Vorstunde');
+ok($tile['hours'][0][4] === 65, 'Kachel: „Jetzt“ mit der Regenwahrscheinlichkeit der laufenden Stunde');
+
+echo 'Abruf beim Übernehmen' . PHP_EOL;
+IPS_ApplyChanges($id);
+ok(call($id, 'GetTimerInterval', ['Update']) === 1000, 'Übernehmen fragt nicht selbst ab, sondern startet den Timer sofort');
+WETTER_Update($id);
+ok(call($id, 'GetTimerInterval', ['Update']) === 15 * 60 * 1000, 'Nach dem ersten Abruf gilt wieder das eingestellte Intervall');
+
+// ---------------------------------------------------------------------------
 echo 'Warnungen' . PHP_EOL;
 IPS_SetProperty($id, 'WarningMinLevel', 3);
 IPS_ApplyChanges($id);
@@ -315,6 +338,11 @@ call($id, 'Process', [forecast(), alerts([alert('minor', 'Frost'), alert('severe
 ok(value($id, 'WarningCount') === 1, 'Mindeststufe 3 filtert Stufe 1');
 call($id, 'Process', [forecast(), null]);
 ok(value($id, 'WarningCount') === 1, 'Fehlgeschlagener Warnabruf behält die letzten Warnungen');
+call($id, 'SetBuffer', ['Warnings', '']);
+call($id, 'Process', [forecast(), null]);
+$tile = json_decode(call($id, 'ReadAttributeString', ['TileData']), true);
+ok(value($id, 'WarningCount') === 1 && value($id, 'WarningLevel') === 3, 'Warnabruf fehlgeschlagen ohne früheren Stand (Neustart): Variablen bleiben');
+ok($tile['warnUnknown'] === true, 'Kachel: unbekannter Warnstand statt „keine Warnungen“');
 call($id, 'Process', [forecast(), alerts([], false)]);
 ok(value($id, 'WarningLevel') === 0 && str_contains((string) value($id, 'WarningText'), 'only available in Germany'), 'Außerhalb Deutschlands: Hinweis statt Warnung');
 $tile = json_decode(call($id, 'ReadAttributeString', ['TileData']), true);

@@ -1039,7 +1039,8 @@
         function renderWarnings(d, t) {
             var box = $('warns');
             clear(box);
-            if (!d.show || !d.show.warnings || d.warnOutside) { box.style.display = 'none'; return; }
+            // warnUnknown: Warnabruf fehlgeschlagen, kein früherer Stand – lieber nichts als „keine Warnungen“ zeigen
+            if (!d.show || !d.show.warnings || d.warnOutside || d.warnUnknown) { box.style.display = 'none'; return; }
             box.style.display = '';
             var list = d.warn || [];
             if (list.length === 0) {

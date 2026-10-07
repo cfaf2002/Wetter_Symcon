@@ -23,6 +23,9 @@ class Wetter extends IPSModuleStrict
     private const STATION_URL = 'https://api.brightsky.dev/current_weather';
     private const GEOCODING_URL = 'https://geocoding-api.open-meteo.com/v1/search';
 
+    // Verzögerung des ersten Abrufs nach Übernehmen/Systemstart (Millisekunden)
+    private const FIRST_UPDATE_DELAY = 1000;
+
     // Stationswerte gelten nur, wenn sie höchstens so alt sind (Sekunden)
     private const STATION_MAX_AGE = 7200;
 
@@ -139,18 +142,18 @@ class Wetter extends IPSModuleStrict
             return;
         }
 
-        $this->SetTimerInterval('Update', $this->IntervalMinutes() * 60 * 1000);
         $this->SetStatus(102);
 
-        if (IPS_GetKernelRunlevel() === KR_READY) {
-            $this->Update();
-        }
+        // Erster Abruf gleich über den Timer, damit „Übernehmen“ nicht auf die Server warten muss
+        // (bis zu drei Abrufe mit je 20 s Zeitlimit); Update() stellt danach das normale Intervall ein.
+        $this->SetTimerInterval('Update', IPS_GetKernelRunlevel() === KR_READY ? self::FIRST_UPDATE_DELAY : $this->UpdateInterval());
     }
 
     public function MessageSink(int $TimeStamp, int $SenderID, int $Message, array $Data): void
     {
         if ($Message === IPS_KERNELSTARTED && $this->Coordinates() !== null) {
-            $this->Update();
+            // nicht im Startvorgang blockieren: Abruf gleich über den Timer
+            $this->SetTimerInterval('Update', self::FIRST_UPDATE_DELAY);
         }
     }
 
@@ -221,6 +224,11 @@ class Wetter extends IPSModuleStrict
      */
     public function Update(): bool
     {
+        // nach dem schnellen ersten Abruf (ApplyChanges, Systemstart) wieder das eingestellte Intervall
+        if ($this->GetTimerInterval('Update') === self::FIRST_UPDATE_DELAY) {
+            $this->SetTimerInterval('Update', $this->UpdateInterval());
+        }
+
         $location = $this->Coordinates();
         if ($location === null) {
             $this->SetStatus(104);
@@ -356,10 +364,15 @@ class Wetter extends IPSModuleStrict
             ];
         }
 
-        // Regen in den nächsten zwei Stunden (z. B. für Markise, Bewässerung)
+        // Regen in den nächsten zwei Stunden (z. B. für Markise, Bewässerung).
+        // Open-Meteo: der Niederschlag eines Stundenwerts gilt für die Stunde *vor* dessen Zeit,
+        // also zählen die Werte mit Zeit nach jetzt, deren Stunde vor jetzt + 2 h beginnt.
         $rainSoon = false;
         foreach ($hours as $hour) {
-            if ($hour['time'] > $now + 7200) {
+            if ($hour['time'] <= $now) {
+                continue;
+            }
+            if ($hour['time'] - 3600 >= $now + 7200) {
                 break;
             }
             if ($hour['precip'] >= 0.1) {
@@ -371,9 +384,12 @@ class Wetter extends IPSModuleStrict
 
         // Warnungen
         $warnings = $this->ProcessAlerts($alerts, $offset);
-        $values['WarningLevel'] = $warnings['level'];
-        $values['WarningCount'] = count($warnings['list']);
-        $values['WarningText'] = $warnings['text'];
+        if (!$warnings['unknown']) {
+            // Stand unbekannt (Abruf fehlgeschlagen, keine früheren Daten): Variablen nicht ändern
+            $values['WarningLevel'] = $warnings['level'];
+            $values['WarningCount'] = count($warnings['list']);
+            $values['WarningText'] = $warnings['text'];
+        }
         $values['StationName'] = $stationInfo !== null
             ? $this->StationLabel($stationInfo)
             : $this->Translate('no current measured values – model values are used');
@@ -423,14 +439,15 @@ class Wetter extends IPSModuleStrict
     }
 
     /**
-     * Wertet die Bright-Sky-Warnungen aus. Ohne neue Daten bleiben die letzten Warnungen erhalten.
+     * Wertet die Bright-Sky-Warnungen aus. Ohne neue Daten bleiben die letzten Warnungen erhalten;
+     * gibt es auch keine früheren (z. B. nach einem Neustart), ist der Stand unbekannt.
      *
-     * @return array{level:int,text:string,list:array,outside:bool}
+     * @return array{level:int,text:string,list:array,outside:bool,unknown:bool}
      */
     private function ProcessAlerts(?array $alerts, int $offset): array
     {
         if (!$this->WarningsWanted()) {
-            return ['level' => 0, 'text' => '', 'list' => [], 'outside' => false];
+            return ['level' => 0, 'text' => '', 'list' => [], 'outside' => false, 'unknown' => false];
         }
         if ($alerts === null) {
             $previous = json_decode($this->GetBuffer('Warnings'), true);
@@ -441,7 +458,8 @@ class Wetter extends IPSModuleStrict
                 }));
                 return $this->SummarizeWarnings($previous['list'], (bool) $previous['outside']);
             }
-            return ['level' => 0, 'text' => '', 'list' => [], 'outside' => false];
+            // keine früheren Warnungen bekannt: nicht „Keine Warnungen“ melden
+            return ['level' => 0, 'text' => '', 'list' => [], 'outside' => false, 'unknown' => true];
         }
 
         $outside = !is_array($alerts['location'] ?? null);
@@ -497,7 +515,7 @@ class Wetter extends IPSModuleStrict
         } else {
             $text = count($lines) > 0 ? implode("\n", $lines) : $this->Translate('No warnings');
         }
-        return ['level' => $level, 'text' => $text, 'list' => $list, 'outside' => $outside];
+        return ['level' => $level, 'text' => $text, 'list' => $list, 'outside' => $outside, 'unknown' => false];
     }
 
     /**
@@ -508,16 +526,21 @@ class Wetter extends IPSModuleStrict
         $german = $this->Language() === 'de';
         $weekdays = $german ? ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'] : ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
+        // Regenwahrscheinlichkeit für „Jetzt“: Open-Meteo bezieht sie auf die Stunde vor dem Zeitstempel,
+        // die laufende Stunde steht also beim ersten Wert nach jetzt
+        $nowProb = 0;
+        foreach ($hours as $hour) {
+            if ($hour['time'] > time()) {
+                $nowProb = $hour['prob'];
+                break;
+            }
+        }
         $hourRows = [];
         foreach (array_slice($hours, 0, $this->ReadPropertyInteger('TileHours')) as $i => $hour) {
-            $hourRows[] = [
-                $i === 0 ? $this->Translate('Now') : gmdate('H', $hour['time'] + $offset),
-                $hour['code'],
-                $hour['day'] ? 1 : 0,
-                // „Jetzt“ zeigt denselben Wert wie oben (bei DWD-Station den gemessenen)
-                $i === 0 ? $values['Temperature'] : $hour['temp'],
-                $hour['prob'],
-            ];
+            // „Jetzt“ zeigt dieselben Werte wie oben (bei DWD-Station den gemessenen), nicht die volle Vorstunde
+            $hourRows[] = $i === 0
+                ? [$this->Translate('Now'), $values['WeatherCode'], $isDay ? 1 : 0, $values['Temperature'], $nowProb]
+                : [gmdate('H', $hour['time'] + $offset), $hour['code'], $hour['day'] ? 1 : 0, $hour['temp'], $hour['prob']];
         }
 
         $dayRows = [];
@@ -571,6 +594,7 @@ class Wetter extends IPSModuleStrict
                 return [$w['level'], $w['headline'], $w['period'], $w['description'], $w['instruction']];
             }, $warnings['list']),
             'warnOutside' => $warnings['outside'],
+            'warnUnknown' => $warnings['unknown'],
             'show'  => [
                 'details'  => $this->ReadPropertyBoolean('TileShowDetails'),
                 'warnings' => $this->ReadPropertyBoolean('TileShowWarnings'),
@@ -1071,6 +1095,12 @@ class Wetter extends IPSModuleStrict
     private function IntervalMinutes(): int
     {
         return max(5, min(180, $this->ReadPropertyInteger('Interval')));
+    }
+
+    /** Abrufintervall in Millisekunden für den Timer. */
+    private function UpdateInterval(): int
+    {
+        return $this->IntervalMinutes() * 60 * 1000;
     }
 
     private function WindUnit(): string
