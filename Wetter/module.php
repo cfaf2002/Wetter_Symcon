@@ -382,6 +382,20 @@ class Wetter extends IPSModuleStrict
         }
         $values['RainSoon'] = $rainSoon;
 
+        // Höchste Böe in den nächsten 2 Stunden und Niederschlag der letzten 6 Stunden
+        // (z. B. Markise vorausschauend einfahren, Mähroboter bei nassem Rasen nicht starten).
+        // Fehlen die Stundenwerte, bleiben die Variablen unverändert.
+        // wie bei RainSoon: alle Stunden, die nach jetzt enden und vor jetzt + 2 h beginnen
+        $gustsSoon = $this->HourlyWindow($hourly, 'wind_gusts_10m', $now, $now + 3 * 3600 - 1, 'max');
+        if ($gustsSoon !== null) {
+            $values['GustsSoon'] = round($gustsSoon, 1);
+        }
+        // nur abgeschlossene Stunden: die sechs letzten Stundenwerte bis jetzt
+        $rainRecent = $this->HourlyWindow($hourly, 'precipitation', $now - 6 * 3600, $now, 'sum');
+        if ($rainRecent !== null) {
+            $values['RainRecent'] = round($rainRecent, 1);
+        }
+
         // Warnungen
         $warnings = $this->ProcessAlerts($alerts, $offset);
         if (!$warnings['unknown']) {
@@ -436,6 +450,30 @@ class Wetter extends IPSModuleStrict
             $this->SetStatus(102);
         }
         return true;
+    }
+
+    /**
+     * Fasst Open-Meteo-Stundenwerte zusammen. Ein Stundenwert gilt für die Stunde *vor* seinem
+     * Zeitstempel; berücksichtigt werden die Werte, deren Zeitstempel (= Ende der Stunde)
+     * nach $after und spätestens bei $until liegt.
+     *
+     * @return float|null Höchstwert ('max') bzw. Summe ('sum'), null ohne verwertbare Werte
+     */
+    private function HourlyWindow(array $hourly, string $key, int $after, int $until, string $mode): ?float
+    {
+        $result = null;
+        foreach ((array) ($hourly['time'] ?? []) as $i => $time) {
+            if ((int) $time <= $after || (int) $time > $until) {
+                continue;
+            }
+            $value = $hourly[$key][$i] ?? null;
+            if (!is_numeric($value)) {
+                continue;
+            }
+            $value = (float) $value;
+            $result = $result === null ? $value : ($mode === 'max' ? max($result, $value) : $result + $value);
+        }
+        return $result;
     }
 
     /**
@@ -669,12 +707,14 @@ class Wetter extends IPSModuleStrict
             'latitude'        => $lat,
             'longitude'       => $lon,
             'current'         => 'temperature_2m,relative_humidity_2m,apparent_temperature,dew_point_2m,is_day,precipitation,weather_code,cloud_cover,pressure_msl,wind_speed_10m,wind_direction_10m,wind_gusts_10m,uv_index,visibility',
-            'hourly'          => 'temperature_2m,precipitation_probability,precipitation,weather_code,is_day,wind_speed_10m',
+            'hourly'          => 'temperature_2m,precipitation_probability,precipitation,weather_code,is_day,wind_speed_10m,wind_gusts_10m',
             'daily'           => 'weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max,sunrise,sunset,sunshine_duration,uv_index_max,wind_speed_10m_max,wind_gusts_10m_max',
             'timezone'        => 'auto',
             'timeformat'      => 'unixtime',
             'forecast_days'   => 14,
             'forecast_hours'  => 48,
+            // vergangene Stunden für „Niederschlag der letzten 6 Stunden“
+            'past_hours'      => 6,
             'wind_speed_unit' => $this->WindUnit(),
         ];
         $model = $this->ReadPropertyString('Model');
@@ -830,6 +870,8 @@ class Wetter extends IPSModuleStrict
             ['TomorrowMin', 'Tomorrow minimum', VARIABLETYPE_FLOAT, 'temp', 'temperature-arrow-down', 56, 'forecast'],
             ['TomorrowPrecipProbability', 'Precipitation probability tomorrow', VARIABLETYPE_INTEGER, 'percent', 'umbrella', 57, 'forecast'],
             ['RainSoon', 'Rain in the next 2 hours', VARIABLETYPE_BOOLEAN, 'rain', 'umbrella', 58, 'forecast'],
+            ['GustsSoon', 'Strongest gust in the next 2 hours', VARIABLETYPE_FLOAT, 'wind', 'wind', 59, 'forecast'],
+            ['RainRecent', 'Precipitation in the last 6 hours', VARIABLETYPE_FLOAT, 'mm', 'cloud-rain', 60, 'forecast'],
 
             ['WarningLevel', 'Warning level', VARIABLETYPE_INTEGER, 'warnlevel', 'triangle-exclamation', 70, 'warnings'],
             ['WarningCount', 'Number of warnings', VARIABLETYPE_INTEGER, 'count', 'triangle-exclamation', 71, 'warnings'],

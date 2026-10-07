@@ -166,6 +166,7 @@ function forecast(array $override = []): array
             'weather_code'              => array_map(static fn (int $i): int => $i === 1 ? 61 : 2, range(0, 47)),
             'is_day'                    => array_map(static fn (int $i): int => ($i % 24) < 12 ? 1 : 0, range(0, 47)),
             'wind_speed_10m'            => array_fill(0, 48, 12.0),
+            'wind_gusts_10m'            => array_map(static fn (int $i): float => [0 => 70.0, 1 => 45.3, 4 => 80.0][$i] ?? 20.0, range(0, 47)),
         ],
         'daily' => [
             'time'                          => $days,
@@ -183,6 +184,29 @@ function forecast(array $override = []): array
         ],
     ];
     return array_replace_recursive($data, $override);
+}
+
+/**
+ * Wie die echte Antwort mit past_hours=6: sechs vergangene Stunden vor die Stundenwerte setzen.
+ *
+ * @param array<int, float> $past Niederschlag der vergangenen Stundenwerte (-6 … -1, relativ zur laufenden Stunde)
+ */
+function withPastHours(array $data, array $past, float $current = 0.0): array
+{
+    $first = $data['hourly']['time'][0];
+    foreach ($data['hourly'] as $key => $list) {
+        $prepend = [];
+        for ($i = -6; $i < 0; $i++) {
+            $prepend[] = match ($key) {
+                'time'          => $first + $i * 3600,
+                'precipitation' => $past[$i] ?? 0.0,
+                default         => $list[0],
+            };
+        }
+        $data['hourly'][$key] = array_merge($prepend, $list);
+    }
+    $data['hourly']['precipitation'][6] = $current;
+    return $data;
 }
 
 function alert(string $severity, string $headline, array $extra = []): array
@@ -324,6 +348,43 @@ $tile = json_decode(call($id, 'ReadAttributeString', ['TileData']), true);
 ok($tile['hours'][0][1] === 3 && $tile['hours'][0][2] === 0, 'Kachel: „Jetzt“ zeigt das aktuelle Wetter statt der Vorstunde');
 ok($tile['hours'][0][4] === 65, 'Kachel: „Jetzt“ mit der Regenwahrscheinlichkeit der laufenden Stunde');
 
+// ---------------------------------------------------------------------------
+echo 'Böen bald und Niederschlag zuletzt' . PHP_EOL;
+$url = call($id, 'ForecastUrl', [52.52, 13.405]);
+ok(str_contains($url, 'past_hours=6') && str_contains($url, 'wind_gusts_10m%2Cuv_index') && preg_match('/hourly=[^&]*wind_gusts_10m/', $url) === 1, 'Stündliche Böen und 6 vergangene Stunden werden abgefragt');
+ok(exists($id, 'GustsSoon') && exists($id, 'RainRecent'), 'Variablen in der Gruppe Vorhersage angelegt');
+$gp = call($id, 'Presentation', ['wind', 'wind']);
+ok(IPS_GetVariable(IPS_GetObjectIDByIdent('GustsSoon', $id))['VariableType'] === VARIABLETYPE_FLOAT && $gp['SUFFIX'] === ' km/h', 'Böen bald: Float in der Windeinheit wie WindGusts');
+call($id, 'Process', [forecast(), alerts([])]);
+ok(value($id, 'GustsSoon') === 45.3, 'Höchste Böe der nächsten 2 Stunden (vergangene Stunde und spätere Böen zählen nicht)');
+$gustAt = static function (int $index, float $gust): array {
+    return ['hourly' => ['wind_gusts_10m' => array_map(static fn (int $i): float => $i === $index ? $gust : 20.0, range(0, 47))]];
+};
+call($id, 'Process', [forecast($gustAt(3, 66.6)), alerts([])]);
+ok(value($id, 'GustsSoon') === 66.6, 'Böe in einer Stunde, die vor jetzt + 2 h beginnt, zählt');
+call($id, 'Process', [forecast($gustAt(4, 66.6)), alerts([])]);
+ok(value($id, 'GustsSoon') === 20.0, 'Böe nach mehr als 2 Stunden zählt nicht');
+call($id, 'Process', [withPastHours(forecast(), [-6 => 5.0, -5 => 0.5, -4 => 0.5, -3 => 0.5, -2 => 0.5, -1 => 0.5], 0.5), alerts([])]);
+ok(value($id, 'RainRecent') === 3.0, 'Niederschlag der letzten 6 abgeschlossenen Stunden (ältere und künftige zählen nicht)');
+ok(value($id, 'RainSoon') === true && count(json_decode(WETTER_GetForecast($id), true)['hourly']) >= 46, 'Vergangene Stunden stören „Regen bald“ und die Stundenliste nicht');
+$tile = json_decode(call($id, 'ReadAttributeString', ['TileData']), true);
+ok($tile['hours'][0][0] === 'Now', 'Kachel beginnt trotz vergangener Stunden mit „Jetzt“');
+$vid = IPS_GetObjectIDByIdent('RainRecent', $id);
+$gid = IPS_GetObjectIDByIdent('GustsSoon', $id);
+$before = [IPS_GetVariable($vid)['VariableUpdated'], IPS_GetVariable($gid)['VariableUpdated']];
+sleep(1);
+call($id, 'Process', [withPastHours(forecast(), [-6 => 5.0, -5 => 0.5, -4 => 0.5, -3 => 0.5, -2 => 0.5, -1 => 0.5], 0.5), alerts([])]);
+ok([IPS_GetVariable($vid)['VariableUpdated'], IPS_GetVariable($gid)['VariableUpdated']] === $before, 'Böen bald / Niederschlag zuletzt nur bei Änderung geschrieben');
+call($id, 'Process', [['error' => true, 'reason' => 'x'], null]);
+ok(value($id, 'RainRecent') === 3.0 && value($id, 'GustsSoon') === 45.3, 'Abruffehler: Werte bleiben unverändert');
+$noHourly = forecast();
+unset($noHourly['hourly']['wind_gusts_10m']);
+$noHourly['hourly']['precipitation'] = [];
+call($id, 'Process', [$noHourly, alerts([])]);
+ok(value($id, 'RainRecent') === 3.0 && value($id, 'GustsSoon') === 45.3, 'Fehlende Stundenwerte: Werte bleiben unverändert');
+call($id, 'Process', [forecast(), alerts([])]);
+ok(value($id, 'RainRecent') === 0.0, 'Ohne vergangene Regenstunden: 0 mm');
+
 echo 'Abruf beim Übernehmen' . PHP_EOL;
 IPS_ApplyChanges($id);
 ok(call($id, 'GetTimerInterval', ['Update']) === 1000, 'Übernehmen fragt nicht selbst ab, sondern startet den Timer sofort');
@@ -356,7 +417,7 @@ IPS_SetProperty($id, 'ShowDetails', true);
 IPS_SetProperty($id, 'ShowForecast', false);
 IPS_ApplyChanges($id);
 ok(exists($id, 'DewPoint') && exists($id, 'UVIndex'), 'Details angelegt');
-ok(!exists($id, 'TomorrowMax') && !exists($id, 'RainSoon'), 'Vorhersage entfernt');
+ok(!exists($id, 'TomorrowMax') && !exists($id, 'RainSoon') && !exists($id, 'GustsSoon') && !exists($id, 'RainRecent'), 'Vorhersage entfernt');
 call($id, 'Process', [forecast(), alerts([])]);
 ok(value($id, 'Pressure') === 1013.6 && value($id, 'UVIndex') === 2.4, 'Details befüllt');
 

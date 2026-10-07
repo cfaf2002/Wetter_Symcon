@@ -2,7 +2,7 @@
 
 [![IP-Symcon ab 8.1](https://img.shields.io/badge/IP--Symcon-ab_8.1-0b6fb3.svg)](https://www.symcon.de)
 [![Optimiert für Symcon 9.0](https://img.shields.io/badge/optimiert_f%C3%BCr-Symcon_9.0-0b6fb3.svg)](https://www.symcon.de/de/service/dokumentation/installation/migrationen/v81-v90-q1-2026/)
-[![Modul-Version 1.4 (Build 15)](https://img.shields.io/badge/Modul--Version-1.4_(Build_15)-informational.svg)](library.json)
+[![Modul-Version 1.5 (Build 16)](https://img.shields.io/badge/Modul--Version-1.5_(Build_16)-informational.svg)](library.json)
 [![Tests](https://github.com/cfaf2002/Wetter_Symcon/actions/workflows/tests.yml/badge.svg)](https://github.com/cfaf2002/Wetter_Symcon/actions/workflows/tests.yml)
 [![PHP 8.3 und 8.5](https://img.shields.io/badge/PHP-8.3_%7C_8.5-777bb4.svg?logo=php&logoColor=white)](https://www.php.net)
 [![SDK: IPSModuleStrict](https://img.shields.io/badge/SDK-IPSModuleStrict-success.svg)](https://www.symcon.de/de/service/dokumentation/entwicklerbereich/sdk-tools/sdk-php/module/)
@@ -42,6 +42,7 @@ Autor: Armin Frohwerk · Lizenz: MIT
 - **Details (zuschaltbar):** Taupunkt, Bewölkung, Luftdruck, Sichtweite, UV-Index
 - **Sonne (zuschaltbar):** Sonnenaufgang, Sonnenuntergang, Sonnenscheindauer heute
 - **Vorhersage (zuschaltbar):** Höchst-/Tiefstwerte und Regenwahrscheinlichkeit für heute und morgen, Wetterlage morgen und der Schalter **„Regen in den nächsten 2 Stunden“** – praktisch für Markise, Bewässerung oder Fenster-Hinweise
+- **Vorausschauend steuern:** **„Höchste Böe in den nächsten 2 Stunden“** (stündliche Böen von Open-Meteo, in der gewählten Windeinheit) und **„Niederschlag der letzten 6 Stunden“** (Summe der abgeschlossenen Stunden, mm) in der Gruppe Vorhersage. Gedacht als Vorhersage-Quelle für die Markisensteuerung (schon bei angesagten Böen oder Regen einfahren) und das Mammotion-Modul (nicht mähen, wenn Regen kommt oder der Rasen noch nass ist): dort die Variablen im Formular auswählen. Bei einem Abruffehler bleiben die letzten Werte stehen
 - **Messwerte der nächsten DWD-Station (zuschaltbar):** Temperatur, Luftfeuchte, Taupunkt, Luftdruck, Wind, Böen, Niederschlag, Bewölkung und Sichtweite gemessen statt berechnet; Station und Entfernung in Variable und Kachel
 - **Unwetterwarnungen des DWD:** höchste Warnstufe (1 gelb bis 4 violett), Anzahl und Text der aktiven Warnungen; einstellbar, ab welcher Stufe gewarnt wird
 - **14-Tage-Vorhersage:** Schaltfläche „14 Tage“ in der Kachel öffnet eine Liste mit Wetterlage, Tiefst-/Höchstwert, Regenwahrscheinlichkeit und -menge, Sonnenstunden und Wind für 14 Tage
@@ -117,6 +118,8 @@ Jede Warnung trägt ein farbiges Schild mit der DWD-Warnstufe (z. B. „Stufe 3 
 | `TodayMax`, `TodayMin`, `TodayPrecipitation`, `TodayPrecipProbability` | heute: Höchst-, Tiefstwert, Niederschlag, Regenwahrscheinlichkeit | | Vorhersage |
 | `TomorrowCode`, `TomorrowMax`, `TomorrowMin`, `TomorrowPrecipProbability` | morgen: Wetterlage, Höchst-, Tiefstwert, Regenwahrscheinlichkeit | | Vorhersage |
 | `RainSoon` | Regen in den nächsten 2 Stunden | Boolean | Vorhersage |
+| `GustsSoon` | Höchste Böe in den nächsten 2 Stunden | Float, gewählte Einheit | Vorhersage |
+| `RainRecent` | Niederschlag der letzten 6 Stunden | Float, mm | Vorhersage |
 | `WarningLevel` | Warnstufe | Integer, Aufzählung 0–4 in den DWD-Farben | Warnungen |
 | `WarningCount` | Anzahl Warnungen | Integer | Warnungen |
 | `WarningText` | Warnungen | String, mehrzeilig | Warnungen |
@@ -168,6 +171,7 @@ Die Kachel nennt beide Quellen in der Fußzeile.
 
 | Version | Build | Datum | Beschreibung |
 | :-- | --: | :-- | :-- |
+| 1.5 | 16 | 07.10.2026 | Neu: Variablen „Höchste Böe in den nächsten 2 Stunden“ (`GustsSoon`) und „Niederschlag der letzten 6 Stunden“ (`RainRecent`) in der Gruppe Vorhersage – als Vorhersage-Quelle für Markisensteuerung und Mammotion; Open-Meteo wird dafür zusätzlich nach stündlichen Böen und den letzten 6 Stunden gefragt |
 | 1.4 | 15 | 07.10.2026 | Korrekturen: „Regen in den nächsten 2 Stunden“ wertet die Stundenwerte richtig aus (Open-Meteo-Niederschlag gilt für die Stunde davor; vergangener Regen zählt nicht mehr, Regen in knapp 2 h wird erkannt); fällt Bright Sky nach einem Neustart aus, bleiben die Warnvariablen stehen statt „Keine Warnungen“ zu melden; „Übernehmen“ und Systemstart warten nicht mehr auf die Server (Abruf gleich danach über den Timer); „Jetzt“ in der Kachel zeigt das aktuelle Wetter statt der Vorstunde |
 | 1.3 | 14 | 06.10.2026 | Hausstil: Regel für die Modulliste (`vendor` gesetzt, höchstens ein Alias) in `STYLEGUIDE.md` und Strukturprüfung ergänzt |
 | 1.3 | 13 | 06.10.2026 | Kachel hält mindestens 5 Tage sichtbar (blendet bei Platzmangel Sonnenbogen, Kurve, Kurzwerte, Stunden aus); lange Wetterlagen brechen sauber um |
